@@ -8,3 +8,8 @@ function! s:RandomString()
 	let l:new_random = strftime("%Y-%m-%d-%H-%M-%S")
 	return l:new_random
 endfunction
+
+
+function! pi2md#PasteClipboardImageToMarkdown()
+	return s:RandomString()
+endfunction
