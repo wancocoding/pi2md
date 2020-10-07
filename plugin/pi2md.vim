@@ -32,23 +32,32 @@ function! s:saveImageOSX()
 	return l:img_file_dir . '/' . l:save_image_file_name
 endfunction
 
-" function! s:randomFileNameUUID()
+" the main function of save image
+function! s:SaveImage()
+	echo "testing!"	
+endfunction
 
-" python << EOF
 
-" import uuid
-" import vim
+function s:SaveImageLocal()
+	
+endfunction
 
-" # output a uuid to the vim variable for insertion below
-" vim.command("let generatedUUID = \"%s\"" % str(uuid.uuid4()))
+function! s:SaveImageLocalOnMacos() abort
+	
+endfunction
 
-" EOF
+" the main function of upload image 
+function s:uploadImage()
+		
+endfunction
 
-" return generatedUUID
+" you need to install nodejs and picgo lib
+function s:uploadImageByPicgo()
+	
+endfunction
 
-" endfunction
 
 function! pi2md#PasteClipboardImageToMarkdown()
-	return s:saveImageOSX()
+	return s:SaveImage()
 endfunction
 
