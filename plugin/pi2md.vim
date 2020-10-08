@@ -60,18 +60,54 @@ function! s:detectOS()
 	endif
 endfunction
 
+
+function s:getRelativePath(img_path)
+	let current_file_header_path = expand('%:p:h')
+	let file_path_list = split(current_file_header_path, s:separator_char)
+	let img_name = fnamemodify(a:img_path, ':p:t')
+	let img_file_header_path = fnamemodify(a:img_path, ':p:h')
+	let img_path_list = split(img_file_header_path, s:separator_char)
+	let loop_index = 0
+	let not_equal_path_index = 0
+	for path_i in img_path_list
+		if path_i !=# file_path_list[loop_index]
+			let not_equal_path_index = loop_index
+			break
+		endif
+		let loop_index += 1
+	endfor
+	let img_nomatch_path_counts = len(img_path_list) - not_equal_path_index
+	" return absolute path if not match path count greater then 4
+	" if nomatch_path_counts == 
+	" 	return a:img_path
+	" endif
+	let file_nomatch_path_count = len(file_path_list) - not_equal_path_index
+	let up_dir_loop_index = 0
+	let up_dir_string = ''
+	while up_dir_loop_index < file_nomatch_path_count
+		let up_dir_string .= '..' . s:separator_char
+		let up_dir_loop_index += 1
+	endwhile
+	let img_left_path_list = img_path_list[not_equal_path_index:]
+	let img_left_path_string = join(img_left_path_list, s:separator_char)
+	let img_relative_path = up_dir_string . img_left_path_string . s:separator_char . img_name
+	echo img_relative_path
+	return img_relative_path
+endfunction
+
 function! s:getLocalStoragePath(local_full_path) abort
 	if g:pi2md_localstorage_prefer_relative == 0
 		return a:local_full_path
 	else
-		let article_full_parent_path = expand('%:p:h')
+		" try to use relative path
+		" let article_full_parent_path = expand('%:p:h')
 		" get current working dir
-		let current_working_dir = getcwd()
-		let article_parent_dir = expand('%:h')
-		execute 'lcd ' . article_parent_dir
-		let image_full_parent_path = fnamemodify(a:local_full_path, ':.')	
-		execute 'lcd ' . current_working_dir
-		return image_full_parent_path
+		" let current_working_dir = getcwd()
+		" let article_parent_dir = expand('%:h')
+		" execute 'lcd ' . article_parent_dir
+		" let image_full_parent_path = fnamemodify(a:local_full_path, ':.')	
+		" execute 'lcd ' . current_working_dir
+		return s:getRelativePath(a:local_full_path)
 	endif
 endfunction
 

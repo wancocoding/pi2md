@@ -40,3 +40,9 @@ Support by Picgo
 * Imgur
 * sm.ms
 * github
+
+
+### ChangeLog
+
+* 2020-10-08
+	- you can use relative path when save to local storage
