@@ -9,12 +9,13 @@
 "
 " ------ local storage settings ------
 " let g:pi2md_localstorage_strategy = 0
-"	default: 0 (0: current dir, 1: absolute path
+"	default: 0 (0: current dir, 1: absolute path)
 " let g:pi2md_localstorage_dirname = 'images'
 "	(optional) default: images, if you select use absolute path, no need to define it 
 " let g:pi2md_localstorage_path = '/Users/vincent/Pictures'
-"	(optional) no default, if you use local storage strategy 1, you must define it
-"
+"	(optional) no default value, if you use local storage strategy 1, you must define it
+" let g:pi2md_localstorage_prefer_relative = 0
+"	(optional) defaut: 0, try to use relative path first
 "
 "
 "
@@ -30,6 +31,9 @@ endif
 if !exists('g:pi2md_localstorage_strategy')
 	let g:pi2md_localstorage_strategy = 0
 	let g:pi2md_localstorage_dirname = 'images'
+	if !exists('g:pi2md_localstorage_prefer_relative')
+		let g:pi2md_localstorage_prefer_relative = 0
+	endif
 endif
 
 function! s:InputName()
@@ -56,6 +60,20 @@ function! s:detectOS()
 	endif
 endfunction
 
+function! s:getLocalStoragePath(local_full_path) abort
+	if g:pi2md_localstorage_prefer_relative == 0
+		return a:local_full_path
+	else
+		let article_full_parent_path = expand('%:p:h')
+		" get current working dir
+		let current_working_dir = getcwd()
+		let article_parent_dir = expand('%:h')
+		execute 'lcd ' . article_parent_dir
+		let image_full_parent_path = fnamemodify(a:local_full_path, ':.')	
+		execute 'lcd ' . current_working_dir
+		return image_full_parent_path
+	endif
+endfunction
 
 function! s:saveImageOSX()
 	let l:save_image_file_name = s:RandomString() . '.png'
@@ -69,7 +87,6 @@ endfunction
 
 " the main function of save image
 function! s:SaveImage()
-	echo "testing!"	
 	" detect the os
 	call s:detectOS()
 	if g:pi2md_save_to == 0
@@ -104,27 +121,36 @@ function s:buildLocalImageFullPath(parent_dir) abort
 	return local_image_full_name_with_path
 endfunction
 
+
+function s:saveImageLocalOnOS(where_to_save) abort
+	if s:os == "Darwin"
+		let image_saved_path = s:saveImageLocalOnMacos(a:where_to_save)
+	endif
+
+	return image_saved_path
+	
+endfunction
+
 " Save Images Locally
 function s:saveImageLocal()
 	echo 'save image in local file system'
 	let parent_dir = s:buildLocalPath()
 	let image_local_save_to = s:buildLocalImageFullPath(parent_dir)
-	echo image_local_save_to
-	if s:os == "Darwin"
-		return s:saveImageLocalOnMacos(image_local_save_to)
-	endif
+	let img_saved_path = s:saveImageLocalOnOS(image_local_save_to)
+	return s:getLocalStoragePath(img_saved_path)
 endfunction
 
 function! s:saveImageLocalOnMacos(save_to)
 	let clip_command = 'osascript'
-    let clip_command .= ' -e "set png_data to the clipboard as «class PNGf»"'
-    let clip_command .= ' -e "set referenceNumber to open for access POSIX path of'
-    let clip_command .= ' (POSIX file \"' . a:save_to . '\") with write permission"'
-    let clip_command .= ' -e "write png_data to referenceNumber"'
-	echo 'call applescript'
-	echo a:save_to
+	let clip_command .= ' -e "set png_data to the clipboard as «class PNGf»"'
+	let clip_command .= ' -e "set referenceNumber to open for access POSIX path of'
+	let clip_command .= ' (POSIX file \"' . a:save_to . '\") with write permission"'
+	let clip_command .= ' -e "write png_data to referenceNumber"'
+	echo "on osx , call as and save image to : " . a:save_to
 	silent call system(clip_command)
+	" echom system(clip_command)
 	if v:shell_error == 1
+		echo "error"
         return 1
     else
 		return a:save_to
@@ -154,10 +180,6 @@ function! pi2md#PasteClipboardImageToMarkdown()
         execute "normal! ve\<C-g>"
 	endif
 endfunction
-
-
-
-
 
 
 
