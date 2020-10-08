@@ -5,7 +5,8 @@
 "
 " Configuration
 " ------ base settings ------
-" let g:pi2md_save_to = 0							" default: 0 (0: local, 1: cloud)
+" let g:pi2md_save_to = 0
+"	default: 0 (0: local, 1: cloud)
 "
 " ------ local storage settings ------
 " let g:pi2md_localstorage_strategy = 0
