@@ -3,6 +3,14 @@ Paste Image To Markdown
 
 A Vim plugin use to autosave  image from clipboard to local system storage or upload image to cloud storage which from your clipboard, and then insert link snippet to your article
 
+
+## Screencasts
+
+**upload image to cloud from clipboard**
+
+![2020-10-09-cloud-storage-upic](https://user-images.githubusercontent.com/55470045/95555526-83c96580-0a44-11eb-847d-863846fd2a4c.gif)
+
+
 ## Features
 
 **You can upload image** from
