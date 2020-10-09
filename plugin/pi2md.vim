@@ -21,6 +21,7 @@
 "
 "
 " ------ cloud storage settings ------
+"
 "  ====== PicGo-Core ======
 " you must define g:pi2md_save_to = 1 first
 " let g:pi2md_cloud_lib = 'picgo-core'
@@ -29,9 +30,19 @@
 "	no default, if you use picgocore, you must define it
 " let g:pi2md_cloud_picgocore_node_path = 
 "	no default, if you use picgocore, you must define it 
+"
+"  ====== PicGo ======
+"  make sure you have install nodejs and global install axios package 
+"  post a http request to picgo server
+" let g:pi2md_cloud_lib = 'picgo'
+" let g:pi2md_cloud_picgo_path = '/Applications/PicGo.app/Contents/MacOS/PicGo' deprecated, use host api instead
+" let g:pi2md_cloud_picgo_node_path = '/Users/vincent/.nvm/versions/node/v12.11.0/bin/node'
+"	no default, must define it if you use picgo app 
+"
 "  ====== uPic ======
-" let g:pi2md_cloud_upic_path = 
-"	no default
+" let g:pi2md_cloud_lib = 'upic'
+" let g:pi2md_cloud_upic_path = '/Applications/uPic.app/Contents/MacOS/uPic'
+"	no default, must define it if you use upic
 
 
 
@@ -57,6 +68,8 @@ endif
 if !exists('g:pi2md_cloud_lib ')
 	let g:pi2md_cloud_lib = 'picgo-core'
 endif
+
+let s:pi2md_root_full_path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
 
 
 " ----------------------------- Utility Func
@@ -235,10 +248,14 @@ endfunction
 
 function! s:saveImageCloud() abort
 	if g:pi2md_cloud_lib ==# 'picgo-core'
-		return s:uploadImageByPicgo()
+		return s:uploadImageByPicgoCore()
 	elseif g:pi2md_cloud_lib ==# 'upic'
 		return s:uploadImageByUPic()
+	elseif g:pi2md_cloud_lib ==# 'picgo'
+		return s:uploadImageByPicGo()
 	endif
+	echoerr 'the cloud lib you defined does not exists!'
+	return 1
 endfunction
 
 
@@ -274,7 +291,7 @@ function s:buildPicgoCoreCmd() abort
 endfunction
 
 " you need to install nodejs and picgo-core lib
-function! s:uploadImageByPicgo()
+function! s:uploadImageByPicgoCore()
 	let check_result = s:checkPicgoCoreEnv()	
 	if check_result == 1
 		return 1
@@ -286,6 +303,41 @@ function! s:uploadImageByPicgo()
 	return output_file_remote_url
 endfunction
 
+
+" ===== PicGo
+
+" check PicGo env
+function s:checkPicGoEnv() abort
+	if !exists('g:pi2md_cloud_picgo_node_path')
+		echoerr 'you must define nodejs path'
+		return 1
+	endif
+endfunction
+
+function s:buildPicGoCmd(temp_img_file) abort
+	let picgo_node_script_path = s:pi2md_root_full_path . s:separator_char . 'node' . s:separator_char . 'picgo.js'
+	if a:temp_img_file ==# ''
+		let picgo_upload_cmd = g:pi2md_cloud_picgo_node_path . ' ' . picgo_node_script_path
+		return picgo_upload_cmd
+	endif
+endfunction
+
+
+function! s:uploadImageByPicGo()
+	let check_result = s:checkPicGoEnv()	
+	if check_result == 1
+		return 1
+	endif
+	let tempfile_path = ''
+	let picgo_upload_from_clipboard_cmd_with_args = s:buildPicGoCmd(tempfile_path)
+	" call upload cmd
+	let upload_result = system(picgo_upload_from_clipboard_cmd_with_args)
+	if upload_result ==# 'error'
+		return 1
+	else
+		return upload_result
+	endif
+endfunction
 
 " ===== uPic
 
