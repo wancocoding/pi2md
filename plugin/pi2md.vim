@@ -94,6 +94,13 @@ function s:getRelativePath(img_path)
 	let loop_index = 0
 	let not_equal_path_index = 0
 	for path_i in img_path_list
+		if loop_index == (len(file_path_list) - 1) && path_i ==# file_path_list[loop_index]
+			let img_left_start_index = loop_index + 1
+			let img_left_path_list = img_path_list[img_left_start_index:]
+			let img_left_path_string = join(img_left_path_list, s:separator_char)
+			let img_relative_path = img_left_path_string . s:separator_char . img_name
+			return img_relative_path
+		endif
 		if path_i !=# file_path_list[loop_index]
 			let not_equal_path_index = loop_index
 			break
