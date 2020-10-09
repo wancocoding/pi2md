@@ -43,6 +43,8 @@ Support by Picgo
 
 ### ChangeLog
 
+* 2020-10-09 1.0.0.beta.2
+	- fix relative path bug
 * 2020-10-09 1.0.0.beta
 	- add support for PicGo-Core
 	- add support for uPic on MacOS only
