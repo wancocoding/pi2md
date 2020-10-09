@@ -43,5 +43,8 @@ Support by Picgo
 
 ### ChangeLog
 
+* 2020-10-09 1.0.0.beta
+	- add support for PicGo-Core
+	- add support for uPic on MacOS only
 * 2020-10-08
 	- you can use relative path when save to local storage
