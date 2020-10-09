@@ -20,14 +20,13 @@ A Vim plugin use to autosave  image from clipboard to local system storage or up
 **Support Storage**
 
 * [x] Local Storage
-* [ ] Cloud Storage (via Picgo-Core)
+* [x] Cloud Storage (via Picgo-Core or uPic etc...)
 
 **Support Cloud Image Hosting Client or Library**
 
-* [ ] PicGo-Core
+* [x] PicGo-Core
 * [ ] PicGo
-* [ ] uPic
-* [ ] iPic
+* [x] uPic
 
 **Support Cloud**
 

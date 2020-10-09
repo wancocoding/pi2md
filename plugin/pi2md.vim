@@ -10,7 +10,7 @@
 "
 " ------ local storage settings ------
 " let g:pi2md_localstorage_strategy = 0
-"	default: 0 (0: current dir, 1: absolute path)
+"	default: 0 (0: current dir, 1: absolute path) if you use cloud , ignore it
 " let g:pi2md_localstorage_dirname = 'images'
 "	(optional) default: images, if you select use absolute path, no need to define it 
 " let g:pi2md_localstorage_path = '/Users/vincent/Pictures'
@@ -20,9 +20,25 @@
 "
 "
 "
-"
-"
-"
+" ------ cloud storage settings ------
+"  ====== PicGo-Core ======
+" you must define g:pi2md_save_to = 1 first
+" let g:pi2md_cloud_lib = 'picgo-core'
+"	default: picgo-core (picgo-core, upic)
+" let g:pi2md_cloud_picgocore_path = 
+"	no default, if you use picgocore, you must define it
+" let g:pi2md_cloud_picgocore_node_path = 
+"	no default, if you use picgocore, you must define it 
+"  ====== uPic ======
+" let g:pi2md_cloud_upic_path = 
+"	no default
+
+
+
+
+
+
+" ----------------------------- Init Variables
 " where is your image store
 if !exists('pi2md_save_to')
 	let g:pi2md_save_to = 0
@@ -37,6 +53,13 @@ if !exists('g:pi2md_localstorage_strategy')
 	endif
 endif
 
+" set the default cloud service
+if !exists('g:pi2md_cloud_lib ')
+	let g:pi2md_cloud_lib = 'picgo-core'
+endif
+
+
+" ----------------------------- Utility Func
 function! s:InputName()
     call inputsave()
     let name = input('Image name: ')
@@ -92,9 +115,12 @@ function s:getRelativePath(img_path)
 	let img_left_path_list = img_path_list[not_equal_path_index:]
 	let img_left_path_string = join(img_left_path_list, s:separator_char)
 	let img_relative_path = up_dir_string . img_left_path_string . s:separator_char . img_name
-	echo img_relative_path
 	return img_relative_path
 endfunction
+
+
+
+" ----------------------------- Local Storage Func
 
 function! s:getLocalStoragePath(local_full_path) abort
 	if g:pi2md_localstorage_prefer_relative == 0
@@ -124,11 +150,12 @@ endfunction
 
 " the main function of save image
 function! s:SaveImage()
-	" detect the os
-	call s:detectOS()
 	if g:pi2md_save_to == 0
 		return s:saveImageLocal()
+	elseif g:pi2md_save_to == 1
+		return s:saveImageCloud()
 	endif
+	return 1
 endfunction
 
 
@@ -137,7 +164,7 @@ function s:buildLocalPath()
 		let local_save_parent_path = expand('%:p:h') . s:separator_char . g:pi2md_localstorage_dirname
 	else
 		if !exists('g:pi2md_localstorage_path')
-			echoerr 'oh it failed'
+			echoerr 'Error! you must define g:pi2md_localstorage_path value when you use absolute path'
 			return
 		endif
 		let local_save_parent_path = g:pi2md_localstorage_path
@@ -158,6 +185,11 @@ function s:buildLocalImageFullPath(parent_dir) abort
 	return local_image_full_name_with_path
 endfunction
 
+function s:tempSaveImageFromClipboard() abort
+	let tempfile_full_path = expand('%:p:h') . s:separator_char . s:RandomString() . '.png'
+	let tempfile_full_path = s:saveImageLocalOnOS(tempfile_full_path)
+	return tempfile_full_path
+endfunction
 
 function s:saveImageLocalOnOS(where_to_save) abort
 	if s:os == "Darwin"
@@ -170,7 +202,6 @@ endfunction
 
 " Save Images Locally
 function s:saveImageLocal()
-	echo 'save image in local file system'
 	let parent_dir = s:buildLocalPath()
 	let image_local_save_to = s:buildLocalImageFullPath(parent_dir)
 	let img_saved_path = s:saveImageLocalOnOS(image_local_save_to)
@@ -183,7 +214,6 @@ function! s:saveImageLocalOnMacos(save_to)
 	let clip_command .= ' -e "set referenceNumber to open for access POSIX path of'
 	let clip_command .= ' (POSIX file \"' . a:save_to . '\") with write permission"'
 	let clip_command .= ' -e "write png_data to referenceNumber"'
-	echo "on osx , call as and save image to : " . a:save_to
 	silent call system(clip_command)
 	" echom system(clip_command)
 	if v:shell_error == 1
@@ -194,17 +224,103 @@ function! s:saveImageLocalOnMacos(save_to)
 	endif
 endfunction
 
-" the main function of upload image 
-function s:uploadImage()
-		
+" ----------------------------- Cloud Storage Func
+
+function! s:saveImageCloud() abort
+	if g:pi2md_cloud_lib ==# 'picgo-core'
+		return s:uploadImageByPicgo()
+	elseif g:pi2md_cloud_lib ==# 'upic'
+		return s:uploadImageByUPic()
+	endif
 endfunction
 
-" you need to install nodejs and picgo lib
-function s:uploadImageByPicgo()
-	
+
+
+" ===== picgo-core
+
+" check picgo-core env
+function s:checkPicgoCoreEnv() abort
+	if !exists('g:pi2md_cloud_picgocore_node_path')
+		echoerr 'you must define node path'
+		return 1
+	else
+		" check node exist
+		if empty(glob(g:pi2md_cloud_picgocore_node_path))
+			echoerr 'the nodejs bin path which you defined does not exist'
+			return 1
+		endif
+	endif
+	if !exists('g:pi2md_cloud_picgocore_path')
+		echoerr 'you must define node path'
+		return 1
+	else
+		" check picgo-core exist
+		if empty(glob(g:pi2md_cloud_picgocore_path))
+			echoerr 'the picgo-core bin does not exist, make sure install correctly'
+			return 1
+		endif
+	endif
 endfunction
+
+function s:buildPicgoCoreCmd() abort
+	let s:picgocore_upload_cmd = g:pi2md_cloud_picgocore_node_path . ' ' . g:pi2md_cloud_picgocore_path . ' u'
+endfunction
+
+" you need to install nodejs and picgo-core lib
+function! s:uploadImageByPicgo()
+	let check_result = s:checkPicgoCoreEnv()	
+	if check_result == 1
+		return 1
+	endif
+	call s:buildPicgoCoreCmd()
+	" call upload cmd
+	let picgocore_output_list = systemlist(s:picgocore_upload_cmd)
+	let output_file_remote_url = picgocore_output_list[-1] 
+	return output_file_remote_url
+endfunction
+
+
+" ===== uPic
+
+" check uPic env
+function s:checkUPicEnv() abort
+	if !exists('g:pi2md_cloud_upic_path')
+		echoerr 'you must define upic path'
+		return 1
+	else
+		" check node exist
+		if empty(glob(g:pi2md_cloud_upic_path))
+			echoerr 'the upic bin path which you defined does not exist'
+			return 1
+		endif
+	endif
+endfunction
+
+function s:buildUPicCmd(temp_img_file) abort
+	let upic_upload_cmd = g:pi2md_cloud_upic_path . ' -u ' . a:temp_img_file 
+	return upic_upload_cmd
+endfunction
+
+
+function! s:uploadImageByUPic()
+	let check_result = s:checkUPicEnv()	
+	if check_result == 1
+		return 1
+	endif
+	let tempfile_path = s:tempSaveImageFromClipboard()
+	let upic_upload_from_clipboard_cmd_with_args = s:buildUPicCmd(tempfile_path)
+	" call upload cmd
+	let upic_output_list = systemlist(upic_upload_from_clipboard_cmd_with_args)
+	call delete(fnameescape(tempfile_path))
+	let output_file_remote_url = upic_output_list[-1] 
+	return output_file_remote_url
+endfunction
+
+" ----------------------------- Global Functions
 
 function! pi2md#PasteClipboardImageToMarkdown()
+	" detect the os
+	call s:detectOS()
 	let save_reslut = s:SaveImage()
 	if save_reslut == 1
 		" error 
