@@ -264,7 +264,7 @@ function s:saveImageLocalOnWindows(save_to) abort
 	let clip_command = "Add-Type -AssemblyName System.Windows.Forms;"
 	let clip_command .= "if ($([System.Windows.Forms.Clipboard]::ContainsImage())) {"
 	let clip_command .= "[System.Drawing.Bitmap][System.Windows.Forms.Clipboard]::GetDataObject().getimage().Save('"
-	let clip_command .= save_to ."', [System.Drawing.Imaging.ImageFormat]::Png) }"
+	let clip_command .= a:save_to ."', [System.Drawing.Imaging.ImageFormat]::Png) }"
 	let clip_command = "powershell -sta \"".clip_command. "\""
 	silent call system(clip_command)
 	if v:shell_error == 1
