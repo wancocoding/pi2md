@@ -1,6 +1,6 @@
 " pi2md.vim - Paste Image to markdown
 " Maintainer:    Vincent Wancocoding  <https://cocoding.cc>
-" Version:       0.1
+" Version:       1.0.0.beta4
 "
 "
 " Configuration
