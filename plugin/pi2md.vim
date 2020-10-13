@@ -1,6 +1,6 @@
 " pi2md.vim - Paste Image to markdown
 " Maintainer:    Vincent Wancocoding  <https://cocoding.cc>
-" Version:       0.1
+" Version:       1.0.0.beta4
 "
 "
 " Configuration
@@ -16,7 +16,7 @@
 " let g:pi2md_localstorage_path = '/Users/vincent/Pictures'
 "	(optional) no default value, if you use local storage strategy 1, you must define it
 " let g:pi2md_localstorage_prefer_relative = 0
-"	(optional) defaut: 0, try to use relative path first
+"	(optional) defaut: 0, 1: try to use relative path first
 "
 "
 "
@@ -83,6 +83,14 @@ endfunction
 function! s:RandomString() 
 	let l:new_random = strftime("%Y-%m-%d-%H-%M-%S")
 	return l:new_random
+endfunction
+
+function! s:IsWSL()
+    let lines = readfile("/proc/version")
+    if lines[0] =~ "Microsoft"
+        return 1
+    endif
+    return 0
 endfunction
 
 function! s:detectOS()
@@ -214,6 +222,14 @@ endfunction
 function s:saveImageLocalOnOS(where_to_save) abort
 	if s:os == "Darwin"
 		let image_saved_path = s:saveImageLocalOnMacos(a:where_to_save)
+	elseif s:os == "Windows"
+		let image_saved_path = s:saveImageLocalOnWindows(a:where_to_save)
+	elseif s:os == "Linux"
+		" Linux could also mean Windowns Subsystem for Linux
+		" if s:IsWSL()
+		" 	return s:SaveFileTMPWSL(a:imgdir, a:tmpname)
+		" endif
+		" return s:SaveFileTMPLinux(a:imgdir, a:tmpname)
 	endif
 
 	return image_saved_path
@@ -241,6 +257,20 @@ function! s:saveImageLocalOnMacos(save_to)
         return 1
     else
 		return a:save_to
+	endif
+endfunction
+
+function s:saveImageLocalOnWindows(save_to) abort
+	let clip_command = "Add-Type -AssemblyName System.Windows.Forms;"
+	let clip_command .= "if ($([System.Windows.Forms.Clipboard]::ContainsImage())) {"
+	let clip_command .= "[System.Drawing.Bitmap][System.Windows.Forms.Clipboard]::GetDataObject().getimage().Save('"
+	let clip_command .= save_to ."', [System.Drawing.Imaging.ImageFormat]::Png) }"
+	let clip_command = "powershell -sta \"".clip_command. "\""
+	silent call system(clip_command)
+	if v:shell_error == 1
+		return 1
+	else
+		return save_to
 	endif
 endfunction
 
@@ -394,4 +424,6 @@ function! pi2md#PasteClipboardImageToMarkdown()
 endfunction
 
 
-
+command! -nargs=0 Pi2mdClipboard call pi2md#PasteClipboardImageToMarkdown()
+" command -nargs=1 Pi2mdPath call pi2md#PasteClipboardImageToMarkdown
+" command -nargs=1 Pi2mdUrl call pi2md#PasteClipboardImageToMarkdown
