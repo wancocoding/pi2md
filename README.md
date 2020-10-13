@@ -5,10 +5,11 @@ A Vim plugin use to autosave  image from clipboard to local system storage or up
 
 ## Table of Contents
 
-  - [Features](#features)
   - [Screencasts](#screencasts)
+  - [Features](#features)
   - [Installing](#installing)
   - [Usage](#usage)
+  - [Example](#example)
   - [ChangeLog](#changelog)
   - [License](#license)
 
@@ -21,11 +22,20 @@ A Vim plugin use to autosave  image from clipboard to local system storage or up
 
 ## Features
 
+Both of `Vim` and `NeoVim` can use this plugin
+
 **You can upload image** from
 
 * [x] Clipboard
 * [ ] Local file(path)
 * [ ] Remote Url
+
+**Support OS**
+
+* [x] MacOS
+* [x] Windows
+* [ ] Linux
+* [ ] WSL(Windows Subsystem For Linux)
 
 **Support Markup Language**
 
@@ -36,13 +46,13 @@ A Vim plugin use to autosave  image from clipboard to local system storage or up
 **Support Storage**
 
 * [x] Local Storage
-* [x] Cloud Storage (via Picgo-Core or uPic etc...)
+* [x] Cloud Storage (via Picgo-Core, Picgo App or uPic etc...)
 
 **Support Cloud Image Hosting Client or Library**
 
-* [x] PicGo-Core
-* [x] PicGo
-* [x] uPic
+* [x] PicGo-Core(nodejd moudle, recommend)
+* [x] PicGo App
+* [x] uPic(only on osx)
 
 **Support Cloud**
 
@@ -71,7 +81,120 @@ A Vim plugin use to autosave  image from clipboard to local system storage or up
 * [Imgur](https://imgur.com/)
 * [custom upload api](https://blog.svend.cc/upic/tutorials/custom)
 
+## Installing
+
+
+### [vim-plug](https://github.com/junegunn/vim-plug)
+
+```vim
+call plug#begin('~/.vim/plugged')
+Plug 'wancocoding/pi2md'
+call plug#end()
+```
+after restart vim/nvim or `:so[urce]` your `vimrc`, then`:PlugInstall`
+
+### [pathogen.vim](https://github.com/tpope/vim-pathogen)
+
+```
+git clone https://github.com/wancocoding/pi2md.git ~/.vim/bundle/pi2md
+```
+
+### [Vundle.vim](https://github.com/VundleVim/Vundle.vim)
+
+```vim
+call vundle#begin()
+Plugin 'preservim/nerdtree'
+call vundle#end()
+```
+
+### [dein.vim](https://github.com/Shougo/dein.vim)
+
+```vim
+call dein#begin()
+call dein#add('preservim/nerdtree')
+call dein#end()
+```
+
+
+
+## Usage
+
+
+You can paste image from clipboard by the command:
+```
+:Pi2mdClipboard
+```
+or call global function
+```vim
+:call pi2md#PasteClipboardImageToMarkdown()
+```
+or you can define a specific key to call this command
+
+```vim
+nmap <leader>pi :Pi2mdClipboard<CR>
+```
+
+All Commands:
+| Command                 | Intro                            |
+| ----------------------- | -------------------------------- |
+| :Pi2mdClipboard         | paste image from clipboard       |
+| :Pi2mdPath <image path> | paste image from a absolute path |
+| :Pi2mdUrl <image url>   | paste image from a remote url    |
+
+
+
+### Local Storage
+
+Local Storage is the default way to save clipboard image
+
+```vim
+let g:pi2md_save_to = 0
+" default: 0 (0: local, 1: cloud) 
+let g:pi2md_localstorage_strategy = 0
+" default: 0 (0: current dir, 1: absolute path) if you use cloud , ignore it
+let g:pi2md_localstorage_dirname = 'images'
+" (optional) default: images, if you select use absolute path, no need to define it 
+let g:pi2md_localstorage_path = '/Users/vincent/Pictures'
+" (optional) no default value, if you use local storage strategy 1, you must define it
+let g:pi2md_localstorage_prefer_relative = 0
+" (optional) defaut: 0, 1: try to use relative path first
+```
+
+## Example
+
+### 1. Save image in current folder and use relative path
+
+```vim
+let g:pi2md_save_to = 0
+let g:pi2md_localstorage_strategy = 0
+let g:pi2md_localstorage_dirname = 'images'
+let g:pi2md_localstorage_prefer_relative = 1
+```
+
+call the command and you will get this in your markdown file:
+```markdown
+![Image](images/2020-10-13-22-33-02.png)
+```
+
+### 2. Save image in current folder and use absolute path
+
+```vim
+let g:pi2md_save_to = 0
+let g:pi2md_localstorage_strategy = 0
+let g:pi2md_localstorage_dirname = 'images'
+let g:pi2md_localstorage_prefer_relative = 0
+```
+
+result:
+```markdown
+![Image](/Users/vincent/develop/wancocoding/docs/example/images/2020-10-13-22-37-04.png)
+```
+
 ## ChangeLog
+* 2020-10-13 1.0.0.beta4
+	- add local storage for windows
+	- add command
+	- update readme 
 * 2020-10-09 1.0.0.beta3
 	- add picgo support
 	- add node script for post request 
