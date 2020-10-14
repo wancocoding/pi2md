@@ -116,6 +116,14 @@ call dein#end()
 ```
 
 
+### Notice
+
+`Win32/64` or `Win10` User, you must install python3 and enable python3 support for your vim, and then install [Pillow Gitgub](https://github.com/python-pillow/Pillow) for your python3
+```
+python -m ensurepip
+python -m pip install -U pip
+python -m pip install pillow
+```
 
 ## Usage
 
