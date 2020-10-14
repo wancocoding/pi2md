@@ -263,7 +263,7 @@ endfunction
 function s:saveImageLocalOnWindows(save_to) abort
 	let powershell_script_path = s:pi2md_root_full_path . s:separator_char . 'scripts' . s:separator_char . 'windowsclipboard.ps1'
 	let call_ps_cmd = 'powershell -noprofile -noninteractive -nologo -sta -executionpolicy unrestricted -file ' . powershell_script_path . a:save_to
-	silent call system(clip_command)
+	silent call system(call_ps_cmd)
 	if v:shell_error == 1
 		return 1
 	else
