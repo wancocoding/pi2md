@@ -261,11 +261,8 @@ function! s:saveImageLocalOnMacos(save_to)
 endfunction
 
 function s:saveImageLocalOnWindows(save_to) abort
-	let clip_command = "Add-Type -AssemblyName System.Windows.Forms;"
-	let clip_command .= "if ($([System.Windows.Forms.Clipboard]::ContainsImage())) {"
-	let clip_command .= "[System.Drawing.Bitmap][System.Windows.Forms.Clipboard]::GetDataObject().getimage().Save('"
-	let clip_command .= a:save_to ."', [System.Drawing.Imaging.ImageFormat]::Png) }"
-	let clip_command = "powershell -sta \"".clip_command. "\""
+	let powershell_script_path = s:pi2md_root_full_path . s:separator_char . 'scripts' . s:separator_char . 'windowsclipboard.ps1'
+	let call_ps_cmd = 'powershell -noprofile -noninteractive -nologo -sta -executionpolicy unrestricted -file ' . powershell_script_path . a:save_to
 	silent call system(clip_command)
 	if v:shell_error == 1
 		return 1
@@ -345,7 +342,7 @@ function s:checkPicGoEnv() abort
 endfunction
 
 function s:buildPicGoCmd(temp_img_file) abort
-	let picgo_node_script_path = s:pi2md_root_full_path . s:separator_char . 'node' . s:separator_char . 'picgo.js'
+	let picgo_node_script_path = s:pi2md_root_full_path . s:separator_char . 'scripts' . s:separator_char . 'picgo.js'
 	if a:temp_img_file ==# ''
 		let picgo_upload_cmd = g:pi2md_cloud_picgo_node_path . ' ' . picgo_node_script_path
 		return picgo_upload_cmd

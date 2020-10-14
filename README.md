@@ -191,6 +191,11 @@ result:
 ```
 
 ## ChangeLog
+
+* 2020-10-14 1.0.0.beta5
+	- fix windows 10 clipboard paste bug
+	- add a powershell script
+	- put all script together
 * 2020-10-13 1.0.0.beta4
 	- add local storage for windows
 	- add command
