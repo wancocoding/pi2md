@@ -262,16 +262,26 @@ endfunction
 
 
 function! s:saveImageLocalByPython3(save_to) abort
-python3 << EOF
 
+python3 << EOF
 import vim
 from PIL import ImageGrab
 
 tmpimg = ImageGrab.grabclipboard()
-# or ImageGrab.grab() to grab the whole screen!
-tmpimg.save(vim.eval('a:save_to'), 'PNG', compress_level=9)
-
+if tmpimg is None:
+	no_image_in_clip = 1
+else:
+	no_image_in_clip = 0
+	img_save_path = vim.eval('a:save_to')
+	# or ImageGrab.grab() to grab the whole screen!
+	tmpimg.save(vim.eval('a:save_to'), 'PNG', compress_level=9)
 EOF
+
+	let py_fun_error = py3eval('no_image_in_clip')
+	if py_fun_error == 1
+		return 1
+	endif
+	return a:save_to
 endfunction
 
 function s:saveImageLocalOnWindows(save_to) abort
