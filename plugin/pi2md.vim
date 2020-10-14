@@ -223,7 +223,7 @@ function s:saveImageLocalOnOS(where_to_save) abort
 	if s:os == "Darwin"
 		let image_saved_path = s:saveImageLocalOnMacos(a:where_to_save)
 	elseif s:os == "Windows"
-		let image_saved_path = s:saveImageLocalOnWindows(a:where_to_save)
+		let image_saved_path = s:saveImageLocalByPython3(a:where_to_save)
 	elseif s:os == "Linux"
 		" Linux could also mean Windowns Subsystem for Linux
 		" if s:IsWSL()
@@ -258,6 +258,20 @@ function! s:saveImageLocalOnMacos(save_to)
     else
 		return a:save_to
 	endif
+endfunction
+
+
+function! s:saveImageLocalByPython3(save_to) abort
+python3 << EOF
+
+import vim
+from PIL import ImageGrab
+
+tmpimg = ImageGrab.grabclipboard()
+# or ImageGrab.grab() to grab the whole screen!
+tmpimg.save(vim.eval('a:save_to'), 'PNG', compress_level=9)
+
+EOF
 endfunction
 
 function s:saveImageLocalOnWindows(save_to) abort
