@@ -170,7 +170,7 @@ let g:pi2md_localstorage_prefer_relative = 0
 
 ## Example
 
-### 1. Save image in current folder and use relative path
+### 1. Save image in current folder and use relative path(Clipboard)
 
 ```vim
 let g:pi2md_save_to = 0
@@ -184,7 +184,7 @@ call the command and you will get this in your markdown file:
 ![Image](images/2020-10-13-22-33-02.png)
 ```
 
-### 2. Save image in current folder and use absolute path
+### 2. Save image in current folder and use absolute path(Clipboard)
 
 ```vim
 let g:pi2md_save_to = 0
@@ -198,8 +198,28 @@ result:
 ![Image](/Users/vincent/develop/wancocoding/docs/example/images/2020-10-13-22-37-04.png)
 ```
 
+### 3. Save image in a specific directory and use relative path(Clipboard)
+
+
+```vim
+let g:pi2md_save_to = 0
+let g:pi2md_localstorage_strategy = 1
+let g:pi2md_localstorage_path= 'f:\Dropbox\Dropbox\docs\md\notes\files\images\202010'
+let g:pi2md_localstorage_prefer_relative = 1
+```
+
+result:
+```
+![Image](..\..\..\files\images\202010\1c353706-c5a1-4865-b767-9f37e5c71c4e-2020-10-16-10-19-28.png)
+```
+
+
 ## ChangeLog
 
+* 2020-10-16 1.0.0.b6
+	- use absolute path on windows when the drive are different
+	- update random func, use uuid
+	- use py3 script to handle clipboard on all platforms
 * 2020-10-14 1.0.0.beta5
 	- fix windows 10 clipboard paste bug
 	- add a powershell script
@@ -223,3 +243,24 @@ result:
 ## License
 
 [MIT](https://github.com/wancocoding/pi2md/blob/master/LICENSE)
+
+Copyright © 2020 Vincent Wancocoding
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+

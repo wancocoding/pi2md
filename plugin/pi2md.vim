@@ -5,6 +5,8 @@
 "
 " Configuration
 " ------ base settings ------
+"  let g:pi2md_debug_mode = 1
+"   default 1 (0: nodebug msg, 1: debug msg in messages)
 " let g:pi2md_save_to = 0
 "	default: 0 (0: local, 1: cloud)
 "
@@ -50,6 +52,10 @@
 
 
 " ----------------------------- Init Variables
+"  debug mode
+if !exists('g:pi2md_debug_mode')
+	let g:pi2md_debug_mode = 1	
+endif
 " where is your image store
 if !exists('pi2md_save_to')
 	let g:pi2md_save_to = 0
@@ -73,6 +79,12 @@ let s:pi2md_root_full_path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
 
 
 " ----------------------------- Utility Func
+fun s:debug_msg(output)
+	if g:pi2md_debug_mode == 1
+		echom a:output
+	endif
+endf
+
 function! s:InputName()
     call inputsave()
     let name = input('Image name: ')
@@ -81,8 +93,17 @@ function! s:InputName()
 endfunction
 
 function! s:RandomString() 
-	let l:new_random = strftime("%Y-%m-%d-%H-%M-%S")
-	return l:new_random
+
+python3 << EOF
+import uuid
+uuid_string = str(uuid.uuid4())
+EOF
+	" let l:new_random = strftime("%Y-%m-%d-%H-%M-%S")
+	" return l:new_random
+	let uuid_string = py3eval('uuid_string')
+	let ts_string = strftime("%Y-%m-%d-%H-%M-%S")
+	let new_random = uuid_string . '-' . ts_string
+	return new_random
 endfunction
 
 function! s:IsWSL()
@@ -114,6 +135,8 @@ function s:getRelativePath(img_path)
 	let img_path_list = split(img_file_header_path, s:separator_char)
 	let loop_index = 0
 	let not_equal_path_index = 0
+	call s:debug_msg(file_path_list)
+	call s:debug_msg(img_path_list)
 	for path_i in img_path_list
 		if loop_index == (len(file_path_list) - 1) && path_i ==# file_path_list[loop_index]
 			let img_left_start_index = loop_index + 1
@@ -122,10 +145,18 @@ function s:getRelativePath(img_path)
 			let img_relative_path = img_left_path_string . s:separator_char . img_name
 			return img_relative_path
 		endif
-		if path_i !=# file_path_list[loop_index]
-			let not_equal_path_index = loop_index
-			break
-		endif
+		
+		if s:os == "Windows"
+			if path_i !=? file_path_list[loop_index]
+				let not_equal_path_index = loop_index
+				break
+			endif
+		else
+			if path_i !=# file_path_list[loop_index]
+				let not_equal_path_index = loop_index
+				break
+			endif
+		endif	
 		let loop_index += 1
 	endfor
 	let img_nomatch_path_counts = len(img_path_list) - not_equal_path_index
