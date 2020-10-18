@@ -1,6 +1,20 @@
+" vim:set ft=vim noet sts=4 sw=4 ts=4 tw=78:
+"
 " pi2md.vim - Paste Image to markdown
 " Maintainer:    Vincent Wancocoding  <https://cocoding.cc>
-" Version:       1.0.0.beta4
+"
+" Configuration
+"
+" let g:pi2mdSettings = {
+" \ "debug": 1,
+" \ "storage": 0,
+" \ "storage_local_position_type": 0,
+" \ "storage_local_dir_name": "images",
+" \ "storage_local_absolute_path": "/User/yourname/your_images_path",
+" \ "storage_local_prefer_relative_path": 1,
+" \ "storage_cloud_tool": "picgo-core",
+" \ "node_bin_path": "/Users/vincent/.nvm/versions/node/v12.11.0/bin/node"
+" }
 "
 "
 " Configuration
@@ -14,9 +28,11 @@
 " let g:pi2md_localstorage_strategy = 0
 "	default: 0 (0: current dir, 1: absolute path) if you use cloud , ignore it
 " let g:pi2md_localstorage_dirname = 'images'
-"	(optional) default: images, if you select use absolute path, no need to define it 
+"	(optional) default: images, if you select use absolute path, no need to 
+"	define it 
 " let g:pi2md_localstorage_path = '/Users/vincent/Pictures'
-"	(optional) no default value, if you use local storage strategy 1, you must define it
+"	(optional) no default value, if you use local storage strategy 1, you 
+"	must define it
 " let g:pi2md_localstorage_prefer_relative = 0
 "	(optional) defaut: 0, 1: try to use relative path first
 "
@@ -28,8 +44,10 @@
 " you must define g:pi2md_save_to = 1 first
 " let g:pi2md_cloud_lib = 'picgo-core'
 "	default: picgo-core (picgo-core, upic)
+"
 " let g:pi2md_cloud_picgocore_path = 
 "	no default, if you use picgocore, you must define it
+"
 " let g:pi2md_cloud_picgocore_node_path = 
 "	no default, if you use picgocore, you must define it 
 "
@@ -37,62 +55,138 @@
 "  make sure you have install nodejs and global install axios package 
 "  post a http request to picgo server
 " let g:pi2md_cloud_lib = 'picgo'
-" let g:pi2md_cloud_picgo_path = '/Applications/PicGo.app/Contents/MacOS/PicGo' deprecated, use host api instead
+"
+" let g:pi2md_cloud_picgo_path = '/Applications/PicGo.app/Contents/MacOS/PicGo'
+"   deprecated, use host api instead
+"
 " let g:pi2md_cloud_picgo_node_path = '/Users/vincent/.nvm/versions/node/v12.11.0/bin/node'
 "	no default, must define it if you use picgo app 
 "
 "  ====== uPic ======
 " let g:pi2md_cloud_lib = 'upic'
+"
 " let g:pi2md_cloud_upic_path = '/Applications/uPic.app/Contents/MacOS/uPic'
-"	no default, must define it if you use upic
+"   no default, must define it if you use upic
+
+
+" the configuration constraint
+let s:pi2mdConfigConstraint = {
+	\ "debug": {
+	\	"legalRange": [0, 1], 
+	\	"default": 1, 
+	\	"required": 1,
+	\	"errorMsg": "the value of debug config must be 0 or 1"}, 
+	\ "storage": { 
+	\	"legalRange": [0, 1], 
+	\	"default": 0, 
+	\	"required": 1,
+	\	"errorMsg": "the value of storage config must be 0 or 1"},
+	\ "storage_local_position_type": {
+	\	"legalRange": [0, 1], 
+	\	"default": 0, 
+	\	"required": 1,
+	\	"errorMsg": "the value of local position type config must be 0 or 1"},
+	\ "storage_local_prefer_relative_path": {
+	\	"legalRange": [0, 1], 
+	\	"default": 1, 
+	\	"required": 0,
+	\	"errorMsg": "the value of use relative path config must be 0 or 1"},
+	\ "storage_cloud_tool": {
+	\	"legalRange": ["picgo-core", "picgo", "upic"], 
+	\	"default": "picgo-core", 
+	\	"required": 0,
+	\	"errorMsg": "the value of cloud lib config must be one of picgo-core, picgo or upic"}
+\ }
 
 
 
+" ==========================================================
+" Init Variables " 
+" ==========================================================
 
+function! s:initPi2md()
+	" add more variables
+	call s:checkConfiguration()
+	call s:detectOS()
+	let g:pi2mdSettings['os'] = s:os
 
+	" get the pi2md plugin root absolute path
+	let s:pi2md_root_full_path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
+	let g:pi2mdSettings['pi2md_root'] = s:pi2md_root_full_path
+endfunction
 
-" ----------------------------- Init Variables
-"  debug mode
-if !exists('g:pi2md_debug_mode')
-	let g:pi2md_debug_mode = 1	
-endif
-" where is your image store
-if !exists('pi2md_save_to')
-	let g:pi2md_save_to = 0
-endif
-
-" set the default storage
-if !exists('g:pi2md_localstorage_strategy')
-	let g:pi2md_localstorage_strategy = 0
-	let g:pi2md_localstorage_dirname = 'images'
-	if !exists('g:pi2md_localstorage_prefer_relative')
-		let g:pi2md_localstorage_prefer_relative = 0
+" make sure all configuration is right
+function! s:checkConfiguration()
+	if !exists('g:pi2mdSettings')
+		" setting some default configuration
+		let g:pi2mdSettings = {
+			\ "debug": 1,
+			\ "storage": 0,
+			\ "storage_local_position_type": 0,
+			\ "storage_local_dir_name": "images",
+			\ "storage_local_prefer_relative_path": 1,
+			\ "storage_cloud_tool": "picgo-core"}
+	else
+		" check configuration , make sure all settings are correct
+		for ckey in keys(s:pi2mdConfigConstraint)
+			call s:checkConfigItem(ckey)
+		endfor
 	endif
-endif
+endfunction
 
-" set the default cloud service
-if !exists('g:pi2md_cloud_lib ')
-	let g:pi2md_cloud_lib = 'picgo-core'
-endif
-
-let s:pi2md_root_full_path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
-
-
-" ----------------------------- Utility Func
-fun s:debug_msg(output)
-	if g:pi2md_debug_mode == 1
-		echom a:output
+function s:checkConfigItem(itemKey)
+	let settingConstraint = s:pi2mdConfigConstraint[a:itemKey]
+	" check if exists in global configuration
+	if !has_key(g:pi2mdSettings, a:itemKey)
+		" set default value if not exist
+		let g:pi2mdSettings[a:itemKey] = settingConstraint.default
+	else
+		" varify its legitimacy
+		let userConfigItem = g:pi2mdSettings[a:itemKey]
+		let legalRang = settingConstraint.legalRange
+		if index(legalRang, userConfigItem) == -1
+			call s:warningMsg(settingConstraint.errorMsg)
+		endif
 	endif
-endf
+endfunction
 
-function! s:InputName()
+function! s:getSetting(key)
+	if !has_key(g:pi2mdSettings, a:key)
+		s:errorMsg(a:key . ' does not exist, please define it in your rc file')
+	else
+		return g:pi2mdSettings[a:key]
+	endif
+endfunction
+
+" ==========================================================
+" Utility Func
+" ==========================================================
+
+function! s:errorMsg(msg)
+	echohl ErrorMsg | echom '[pi2md]-[Error] '.a:msg | echohl None
+endfunction
+
+function! s:warningMsg(msg)
+	echohl WarningMsg | echom '[pi2md]-[Warning] '.a:msg | echohl None
+endfunction
+
+function s:debugMsg(msg)
+	let msgPrefx = '[pi2md]-[Debug] '
+	if s:getSetting('debug') == 1
+		echom msgPrefx . a:msg
+	endif
+endfunction
+
+" Deprecated use command args instead
+function! s:inputName()
     call inputsave()
     let name = input('Image name: ')
     call inputrestore()
     return name
 endfunction
 
-function! s:RandomString() 
+
+function! s:uuid4() 
 
 python3 << EOF
 import uuid
@@ -106,7 +200,8 @@ EOF
 	return new_random
 endfunction
 
-function! s:IsWSL()
+" check windows subsystem for linux
+function! s:isWSL()
     let lines = readfile("/proc/version")
     if lines[0] =~ "Microsoft"
         return 1
@@ -127,7 +222,15 @@ function! s:detectOS()
 endfunction
 
 
-function s:getRelativePath(img_path)
+
+" ==========================================================
+" File system utils
+" ==========================================================
+
+let s:fileHandler = {}
+
+" translate absolute path to relative path
+function s:fileHandler.getRelativePath(img_path) dict
 	let current_file_header_path = expand('%:p:h')
 	let file_path_list = split(current_file_header_path, s:separator_char)
 	let img_name = fnamemodify(a:img_path, ':p:t')
@@ -135,8 +238,8 @@ function s:getRelativePath(img_path)
 	let img_path_list = split(img_file_header_path, s:separator_char)
 	let loop_index = 0
 	let not_equal_path_index = 0
-	call s:debug_msg(file_path_list)
-	call s:debug_msg(img_path_list)
+	call s:debugMsg('current dir : ' . current_file_header_path)
+	call s:debugMsg('image save dir : ' . img_file_header_path)
 	for path_i in img_path_list
 		if loop_index == (len(file_path_list) - 1) && path_i ==# file_path_list[loop_index]
 			let img_left_start_index = loop_index + 1
@@ -177,12 +280,11 @@ function s:getRelativePath(img_path)
 	return img_relative_path
 endfunction
 
-
-
-" ----------------------------- Local Storage Func
-
-function! s:getLocalStoragePath(local_full_path) abort
-	if g:pi2md_localstorage_prefer_relative == 0
+" convert the path to the final version, depending on your configuration file
+" config: storage_local_prefer_relative_path
+function! s:fileHandler.getLocalStoragePath(local_full_path) dict
+	if s:getSetting('storage_local_prefer_relative_path') == 0
+		call s:debugMsg('local storage use absolute path')
 		return a:local_full_path
 	else
 		" try to use relative path
@@ -193,41 +295,137 @@ function! s:getLocalStoragePath(local_full_path) abort
 		" execute 'lcd ' . article_parent_dir
 		" let image_full_parent_path = fnamemodify(a:local_full_path, ':.')	
 		" execute 'lcd ' . current_working_dir
-		return s:getRelativePath(a:local_full_path)
+		call s:debugMsg('local storage use relative path')
+		return self.getRelativePath(a:local_full_path)
 	endif
 endfunction
 
-function! s:saveImageOSX()
-	let l:save_image_file_name = s:RandomString() . '.png'
-	if !exists('g:pi2md_image_base_dir')
-		let l:img_file_dir = expand("%:p:h") . '/' . g:pi2md_image_dir_name
-	else
-		let l:img_file_dir = g:pi2md_image_base_dir . '/' . strftime("%Y") . '/' . strftime("%m")  . '/'  . expand("%:p:t:r") 
-	endif
-	return l:img_file_dir . '/' . l:save_image_file_name
-endfunction
+" copy file from one path to another, del_source will decide whether to delete the 
+" source file
+function! s:fileHandler.copyFile(source, dest, del_source=1) dict
 
-" the main function of save image
-function! s:SaveImage()
-	if g:pi2md_save_to == 0
-		return s:saveImageLocal()
-	elseif g:pi2md_save_to == 1
-		return s:saveImageCloud()
-	endif
-	return 1
+python3 << EOF
+import shutil
+
+delete_source = vim.eval('a:del_source')
+if delete_source == 1:
+	shutil.move(vim.eval('a:source'), vim.eval('a:dest'))
+else:
+	shutil.copyfile(vim.eval('a:source'), vim.eval('a:dest'))
+EOF
+
 endfunction
 
 
-function s:buildLocalPath()
-	if g:pi2md_localstorage_strategy == 0
-		let local_save_parent_path = expand('%:p:h') . s:separator_char . g:pi2md_localstorage_dirname
-	else
-		if !exists('g:pi2md_localstorage_path')
-			echoerr 'Error! you must define g:pi2md_localstorage_path value when you use absolute path'
-			return
+" ==========================================================
+" markup language tools
+" ==========================================================
+
+let s:markupLang = {}
+
+" get current file markup language type
+" so far from now, this plugin support markdown, reStructuredText and Vimwiki
+function! s:markupLang.detectMarkupLanguage() dict
+	let file_type = &filetype
+	if file_type ==? 'markdown' || file_type ==? 'rst'
+		return file_type
+	endif
+	let file_postfix = expand('%:e')
+	if file_postfix ==? 'wiki'
+		return 'vimwiki'
+	endif
+endfunction
+
+" insert lint for different markup language
+function! s:markupLang.insertImageLink(img_url) dict
+	let file_type = self.detectMarkupLanguage()
+	if file_type ==? 'markdown'
+		execute "normal! i![I"
+		let ipos = getcurpos()
+		execute "normal! amage](" . a:img_url . ")"
+		call setpos('.', ipos)
+		execute "normal! ve\<C-g>"
+	elseif file_type ==? 'rst'
+		execute "normal! i!.. |I"
+		let ipos = getcurpos()
+		execute "normal! amage| image:: " . a:img_url
+		call setpos('.', ipos)
+		execute "normal! ve\<C-g>"
+	elseif file_type ==? 'vimwiki'
+		let vimwiki_flag = ''
+		if g:pi2mdSettings['storage'] == 0
+			let vimwiki_flag = 'file:'
 		endif
-		let local_save_parent_path = g:pi2md_localstorage_path
+		execute "normal! i!{{" . vimwiki_flag . a:img_url . "}}"
 	endif
+	return
+endf
+
+
+" ==========================================================
+" Clipboard Tools
+" ==========================================================
+
+function! s:getClipBoardImageAndSave(save_path)
+	let save_to = fnameescape(a:save_path)
+
+python3 << EOF
+import vim
+from PIL import ImageGrab
+tmpimg = ImageGrab.grabclipboard()
+if tmpimg is None:
+	no_image_in_clip = 1
+else:
+	no_image_in_clip = 0
+	tmpimg.save(vim.eval('save_to'), 'PNG', compress_level=9)
+EOF
+
+	let py_fun_error = py3eval('no_image_in_clip')
+	if py_fun_error == 1
+		call s:warningMsg('saveClipBoardImage error')
+		return 1
+	endif
+	return a:save_path
+endfunction
+
+
+function! s:getAndSaveClipBoardImageTemporary()
+	" get current dir and temp file_name
+	let temp_file_name = s:uuid4() . '.png'
+	let temp_path = expand('%:p:h')
+	let temp_img_full_path = temp_path . s:separator_char . temp_file_name
+	return s:getClipBoardImageAndSave(temp_img_full_path)
+endfunction
+
+" ==========================================================
+" Storage
+" ==========================================================
+
+
+" ====== Local storage
+
+let s:localStorage = {}
+
+function! s:localStorage.saveToLocalStorage(source) dict
+	" get file name from source
+	let file_name = fnamemodify(a:source, ':p:t')
+	let file_dest_path = self.buildLocalStorageParentPath() . s:separator_char . file_name
+	call s:fileHandler.copyFile(a:source, file_dest_path)
+	call s:debugMsg('The final image local path is ' . file_dest_path)
+	let markup_link_url = s:fileHandler.getLocalStoragePath(file_dest_path)
+	return markup_link_url
+endfunction
+
+" build the local storage real path , not the same with temporary path
+function! s:localStorage.buildLocalStorageParentPath() dict
+	if s:getSetting('storage_local_position_type') == 0
+		" use current dirctory
+		let local_save_parent_path = expand('%:p:h') . s:separator_char . s:getSetting('storage_local_dir_name')
+	else
+		" use absolute path for local storage
+		let local_save_parent_path = getSetting('g:pi2md_localstorage_path')
+	endif
+	" make dir if not exists
 	if !isdirectory(local_save_parent_path)
         call mkdir(local_save_parent_path)
     endif
@@ -236,246 +434,74 @@ function s:buildLocalPath()
     else
         return fnameescape(local_save_parent_path)
     endif
+
 endfunction
 
-function s:buildLocalImageFullPath(parent_dir) abort
-	let local_random_image_name = s:RandomString()	
-	let local_image_full_name_with_path = a:parent_dir . s:separator_char . local_random_image_name . '.png'
-	return local_image_full_name_with_path
-endfunction
+" ====== Cloud storage
 
-function s:tempSaveImageFromClipboard() abort
-	let tempfile_full_path = expand('%:p:h') . s:separator_char . s:RandomString() . '.png'
-	let tempfile_full_path = s:saveImageLocalOnOS(tempfile_full_path)
-	return tempfile_full_path
-endfunction
+let s:cloudStorage = {}
 
-function s:saveImageLocalOnOS(where_to_save) abort
-	if s:os == "Darwin"
-		let image_saved_path = s:saveImageLocalOnMacos(a:where_to_save)
-	elseif s:os == "Windows"
-		let image_saved_path = s:saveImageLocalByPython3(a:where_to_save)
-	elseif s:os == "Linux"
-		" Linux could also mean Windowns Subsystem for Linux
-		" if s:IsWSL()
-		" 	return s:SaveFileTMPWSL(a:imgdir, a:tmpname)
-		" endif
-		" return s:SaveFileTMPLinux(a:imgdir, a:tmpname)
-	endif
+function s:cloudStorage.saveToCloudStorage(source)
 
-	return image_saved_path
 	
 endfunction
 
-" Save Images Locally
-function s:saveImageLocal()
-	let parent_dir = s:buildLocalPath()
-	let image_local_save_to = s:buildLocalImageFullPath(parent_dir)
-	let img_saved_path = s:saveImageLocalOnOS(image_local_save_to)
-	return s:getLocalStoragePath(img_saved_path)
-endfunction
 
-function! s:saveImageLocalOnMacos(save_to)
-	let clip_command = 'osascript'
-	let clip_command .= ' -e "set png_data to the clipboard as «class PNGf»"'
-	let clip_command .= ' -e "set referenceNumber to open for access POSIX path of'
-	let clip_command .= ' (POSIX file \"' . a:save_to . '\") with write permission"'
-	let clip_command .= ' -e "write png_data to referenceNumber"'
-	silent call system(clip_command)
-	" echom system(clip_command)
-	if v:shell_error == 1
-		echo "error"
-        return 1
-    else
-		return a:save_to
+" ==========================================================
+" Paste from clipboard 
+" ==========================================================
+
+function! s:pasteImageFromClipboard()
+	" save image to temp file
+	let temp_img_file = s:getAndSaveClipBoardImageTemporary()
+	" upload to cloud or save to local
+	let final_img_url = 'your link'
+	if s:getSetting('storage') == 0
+		let final_img_url = s:localStorage.saveToLocalStorage(temp_img_file)
+	elseif s:getSetting('storage') == 1
+		" cloud storage
 	endif
-endfunction
-
-
-function! s:saveImageLocalByPython3(save_to) abort
-
-python3 << EOF
-import vim
-from PIL import ImageGrab
-
-tmpimg = ImageGrab.grabclipboard()
-if tmpimg is None:
-	no_image_in_clip = 1
-else:
-	no_image_in_clip = 0
-	img_save_path = vim.eval('a:save_to')
-	# or ImageGrab.grab() to grab the whole screen!
-	tmpimg.save(vim.eval('a:save_to'), 'PNG', compress_level=9)
-EOF
-
-	let py_fun_error = py3eval('no_image_in_clip')
-	if py_fun_error == 1
-		return 1
-	endif
-	return a:save_to
-endfunction
-
-function s:saveImageLocalOnWindows(save_to) abort
-	let powershell_script_path = s:pi2md_root_full_path . s:separator_char . 'scripts' . s:separator_char . 'windowsclipboard.ps1'
-	let call_ps_cmd = 'powershell -noprofile -noninteractive -nologo -sta -executionpolicy unrestricted -file ' . powershell_script_path . ' ' . a:save_to
-	silent call system(call_ps_cmd)
-	if v:shell_error == 1
-		return 1
-	else
-		return save_to
-	endif
-endfunction
-
-" ----------------------------- Cloud Storage Func
-
-function! s:saveImageCloud() abort
-	if g:pi2md_cloud_lib ==# 'picgo-core'
-		return s:uploadImageByPicgoCore()
-	elseif g:pi2md_cloud_lib ==# 'upic'
-		return s:uploadImageByUPic()
-	elseif g:pi2md_cloud_lib ==# 'picgo'
-		return s:uploadImageByPicGo()
-	endif
-	echoerr 'the cloud lib you defined does not exists!'
-	return 1
+	" write link for markup language
+	call s:markupLang.insertImageLink(final_img_url)	
+	return
 endfunction
 
 
 
-" ===== picgo-core
+" ==========================================================
+" Paste from Remote Url 
+" ==========================================================
 
-" check picgo-core env
-function s:checkPicgoCoreEnv() abort
-	if !exists('g:pi2md_cloud_picgocore_node_path')
-		echoerr 'you must define node path'
-		return 1
-	else
-		" check node exist
-		if empty(glob(g:pi2md_cloud_picgocore_node_path))
-			echoerr 'the nodejs bin path which you defined does not exist'
-			return 1
-		endif
-	endif
-	if !exists('g:pi2md_cloud_picgocore_path')
-		echoerr 'you must define node path'
-		return 1
-	else
-		" check picgo-core exist
-		if empty(glob(g:pi2md_cloud_picgocore_path))
-			echoerr 'the picgo-core bin does not exist, make sure install correctly'
-			return 1
-		endif
-	endif
+function! s:pasteImageFromRemoteUrl()
+	" save image to a temp file
 endfunction
 
-function s:buildPicgoCoreCmd() abort
-	let s:picgocore_upload_cmd = g:pi2md_cloud_picgocore_node_path . ' ' . g:pi2md_cloud_picgocore_path . ' u'
-endfunction
+" ==========================================================
+" Paste from local
+" ==========================================================
 
-" you need to install nodejs and picgo-core lib
-function! s:uploadImageByPicgoCore()
-	let check_result = s:checkPicgoCoreEnv()	
-	if check_result == 1
-		return 1
-	endif
-	call s:buildPicgoCoreCmd()
-	" call upload cmd
-	let picgocore_output_list = systemlist(s:picgocore_upload_cmd)
-	let output_file_remote_url = picgocore_output_list[-1] 
-	return output_file_remote_url
+
+function! s:pasteImageFromLocalPath()
+	" 
 endfunction
 
 
-" ===== PicGo
+" ==========================================================
+" Main function and commands
+" ==========================================================
 
-" check PicGo env
-function s:checkPicGoEnv() abort
-	if !exists('g:pi2md_cloud_picgo_node_path')
-		echoerr 'you must define nodejs path'
-		return 1
-	endif
+function! pi2md#PasteClipboardImage()
+	call s:pasteImageFromClipboard()
 endfunction
 
-function s:buildPicGoCmd(temp_img_file) abort
-	let picgo_node_script_path = s:pi2md_root_full_path . s:separator_char . 'scripts' . s:separator_char . 'picgo.js'
-	if a:temp_img_file ==# ''
-		let picgo_upload_cmd = g:pi2md_cloud_picgo_node_path . ' ' . picgo_node_script_path
-		return picgo_upload_cmd
-	endif
-endfunction
+" ==========================================================
+" Bind Commands
+" ==========================================================
 
 
-function! s:uploadImageByPicGo()
-	let check_result = s:checkPicGoEnv()	
-	if check_result == 1
-		return 1
-	endif
-	let tempfile_path = ''
-	let picgo_upload_from_clipboard_cmd_with_args = s:buildPicGoCmd(tempfile_path)
-	" call upload cmd
-	let upload_result = system(picgo_upload_from_clipboard_cmd_with_args)
-	if upload_result ==# 'error'
-		return 1
-	else
-		return upload_result
-	endif
-endfunction
 
-" ===== uPic
+call s:initPi2md()
 
-" check uPic env
-function s:checkUPicEnv() abort
-	if !exists('g:pi2md_cloud_upic_path')
-		echoerr 'you must define upic path'
-		return 1
-	else
-		" check node exist
-		if empty(glob(g:pi2md_cloud_upic_path))
-			echoerr 'the upic bin path which you defined does not exist'
-			return 1
-		endif
-	endif
-endfunction
-
-function s:buildUPicCmd(temp_img_file) abort
-	let upic_upload_cmd = g:pi2md_cloud_upic_path . ' -u ' . a:temp_img_file 
-	return upic_upload_cmd
-endfunction
+command! -nargs=0 Pi2mdClipboard call pi2md#PasteClipboardImage()
 
 
-function! s:uploadImageByUPic()
-	let check_result = s:checkUPicEnv()	
-	if check_result == 1
-		return 1
-	endif
-	let tempfile_path = s:tempSaveImageFromClipboard()
-	let upic_upload_from_clipboard_cmd_with_args = s:buildUPicCmd(tempfile_path)
-	" call upload cmd
-	let upic_output_list = systemlist(upic_upload_from_clipboard_cmd_with_args)
-	call delete(fnameescape(tempfile_path))
-	let output_file_remote_url = upic_output_list[-1] 
-	return output_file_remote_url
-endfunction
-
-" ----------------------------- Global Functions
-
-function! pi2md#PasteClipboardImageToMarkdown()
-	" detect the os
-	call s:detectOS()
-	let save_reslut = s:SaveImage()
-	if save_reslut == 1
-		" error 
-		return 
-	else
-		execute "normal! i![I"
-        let ipos = getcurpos()
-        execute "normal! amage](" . save_reslut . ")"
-        call setpos('.', ipos)
-        execute "normal! ve\<C-g>"
-	endif
-endfunction
-
-
-command! -nargs=0 Pi2mdClipboard call pi2md#PasteClipboardImageToMarkdown()
-" command -nargs=1 Pi2mdPath call pi2md#PasteClipboardImageToMarkdown
-" command -nargs=1 Pi2mdUrl call pi2md#PasteClipboardImageToMarkdown

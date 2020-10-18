@@ -1,13 +1,15 @@
 Paste Image To Markdown
 =======================
 
-A Vim plugin use to autosave  image from clipboard to local system storage or upload image to cloud storage which from your clipboard, and then insert link snippet to your article
+A Vim/NeoVim plugin use to autosave  image from clipboard to local system storage or upload image to cloud storage which from your clipboard, and then insert link snippet to your article
 
 ## Table of Contents
 
   - [Screencasts](#screencasts)
   - [Features](#features)
   - [Installing](#installing)
+	- [Dependencies](#dependencies)
+	- [Install Pi2md](#install-pi2md)
   - [Usage](#usage)
   - [Example](#example)
   - [ChangeLog](#changelog)
@@ -83,8 +85,43 @@ Both of `Vim` and `NeoVim` can use this plugin
 
 ## Installing
 
+### Dependencies
 
-### [vim-plug](https://github.com/junegunn/vim-plug)
+#### Pillow
+
+You must install python3 and enable python3 
+support for your vim, and then install [Pillow](https://github.com/python-pillow/Pillow) 
+
+For `Win32/64` or `Win10` User, before `pip install`
+```
+python -m ensurepip
+python -m pip install -U pip
+python -m pip install pillow
+```
+Unix like platforms:
+```
+pip install -U pip
+pip install pillow
+```
+
+
+#### Picgo-Core(Optional)
+
+If you upload to cloud with picgo-core, you must install picgo globally:
+```
+npm install picgo -g
+```
+
+If you upload to cloud with picgo app, you must install axios globally:
+```
+npm install axios -g
+```
+
+### Install Pi2md 
+
+You can install `Pi2md` by the 3rd-party plugin managers
+
+[vim-plug](https://github.com/junegunn/vim-plug)
 
 ```vim
 call plug#begin('~/.vim/plugged')
@@ -93,13 +130,13 @@ call plug#end()
 ```
 after restart vim/nvim or `:so[urce]` your `vimrc`, then`:PlugInstall`
 
-### [pathogen.vim](https://github.com/tpope/vim-pathogen)
+[pathogen.vim](https://github.com/tpope/vim-pathogen)
 
 ```
 git clone https://github.com/wancocoding/pi2md.git ~/.vim/bundle/pi2md
 ```
 
-### [Vundle.vim](https://github.com/VundleVim/Vundle.vim)
+[Vundle.vim](https://github.com/VundleVim/Vundle.vim)
 
 ```vim
 call vundle#begin()
@@ -107,7 +144,7 @@ Plugin 'preservim/nerdtree'
 call vundle#end()
 ```
 
-### [dein.vim](https://github.com/Shougo/dein.vim)
+[dein.vim](https://github.com/Shougo/dein.vim)
 
 ```vim
 call dein#begin()
@@ -116,14 +153,6 @@ call dein#end()
 ```
 
 
-### Notice
-
-`Win32/64` or `Win10` User, you must install python3 and enable python3 support for your vim, and then install [Pillow Gitgub](https://github.com/python-pillow/Pillow) for your python3
-```
-python -m ensurepip
-python -m pip install -U pip
-python -m pip install pillow
-```
 
 ## Usage
 
@@ -216,7 +245,22 @@ result:
 
 ## ChangeLog
 
+* 2020-10-18
+	- add functions for check configuration
+	- add functions for print different messages
+* 2020-10-16
+	- change pi2md configuration to dictionary
+	- refactor all functions
+	- support reStructuredText language
+	- support vimwiki markup language
+	- update examples
+	- update config introduction
+	- first release version
+* 2020-10-16 1.0.0.b7
+	- refactor clipbord function
+	- update readme with more example
 * 2020-10-16 1.0.0.b6
+	- add debug mode
 	- use absolute path on windows when the drive are different
 	- update random func, use uuid
 	- use py3 script to handle clipboard on all platforms
