@@ -64,7 +64,10 @@ let s:pi2mdConfigConstraint = {
 
 let s:Errors = {
 			\ "E-PIM-10": "Configuration error",
-			\ "E-PIM-11": "Configuration item error" 
+			\ "E-PIM-11": "Configuration item error",
+			\ "E-PIM-12": "There are no images in your system clipbord!",
+			\ "E-PIM-13": "The python module \"PIL\" could not found, Please install it with pip",
+			\ "E-PIM-14": "Your system does not have python3 installed or python3 and python3x.dll are not in the PATH"
 			\ }
 
 " ==========================================================
@@ -77,6 +80,7 @@ function! s:settings.initPi2md() dict
 	try
 		" add more variables
 		call self.checkConfiguration()
+		call self.checkPy()
 		call s:utilityTools.detectOS()
 		let g:pi2mdSettings['os'] = s:os
 
@@ -86,6 +90,20 @@ function! s:settings.initPi2md() dict
 	catch /.*/
 		call s:logger.errorMsg('Caught "' . v:exception . '" in [iniPi2md]')
 		throw "E-PIM-10"
+	endtry
+endfunction
+
+function s:settings.checkPy3() dict
+	if !has('python3')
+		throw "E-PIM-14"
+	endif
+	" check module
+	try
+python3 << EOF
+import PIL
+EOF
+	catch 'Vim(python3):ModuleNotFoundError: No module named \'PIL\''
+		throw "E-PIM-13"
 	endtry
 endfunction
 
@@ -201,7 +219,7 @@ let s:utilityTools = {}
 function s:utilityTools.caught() dict
 	let catchErr = v:exception
 	if has_key(s:Errors, catchErr)
-		s:logger.errorMsg(s:Errors[catchErr])
+		call s:logger.errorMsg(s:Errors[catchErr])
 	else
 		call s:logger.errorMsg('Caught "' . v:exception . '"')
 	endif
@@ -372,16 +390,14 @@ function! s:markupLang.insertImageLink(img_url) dict
 		let ipos = getcurpos()
 		execute "normal! amage](" . a:img_url . ")"
 		call setpos('.', ipos)
-		redraw
-		echo 'please enter the title of this image...'
+		redraw | echo 'please enter the title of this image...'
 		execute "normal! ve\<C-g>"
 	elseif file_type ==? 'rst'
 		execute "normal! i!.. |I"
 		let ipos = getcurpos()
 		execute "normal! amage| image:: " . a:img_url
 		call setpos('.', ipos)
-		redraw
-		echo 'please enter the title of this image...'
+		redraw | echo 'please enter the title of this image...'
 		execute "normal! ve\<C-g>"
 	elseif file_type ==? 'vimwiki'
 		let vimwiki_flag = ''
@@ -402,7 +418,7 @@ let s:clipboardTools = {}
 
 function! s:clipboardTools.getClipBoardImageAndSave(save_path) dict
 	let save_to = fnameescape(a:save_path)
-
+	try
 python3 << EOF
 import vim
 from PIL import ImageGrab
@@ -413,11 +429,16 @@ else:
 	no_image_in_clip = 0
 	tmpimg.save(vim.eval('save_to'), 'PNG', compress_level=9)
 EOF
+	catch 'Vim(python3):ModuleNotFoundError: No module named \'PIL\''
+		throw "E-PIM-13"
+	catch /^Vim\%((\a\+)\)\=:E370:/
+		throw "E-PIM-14"
+	endtry
 
 	let py_fun_error = py3eval('no_image_in_clip')
 	if py_fun_error == 1
-		call s:logger.warningMsg('saveClipBoardImage error')
-		return 1
+		call s:logger.warningMsg('No image in your system clipboard!')
+		throw "E-PIM-12"
 	endif
 	return a:save_path
 endfunction
