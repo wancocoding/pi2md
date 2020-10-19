@@ -244,10 +244,17 @@ result:
 
 
 ## ChangeLog
-
+* 2020-10-19
+	- update check settings function
+	- update settings data structure
+	- refactored the functions of cloud storage
+	- update readme examples
+	- use try catch to handle exceptions
+	- modify logging format
 * 2020-10-18
 	- add functions for check configuration
 	- add functions for print different messages
+	- refactor all functions to dict function
 * 2020-10-16
 	- change pi2md configuration to dictionary
 	- refactor all functions
@@ -255,7 +262,6 @@ result:
 	- support vimwiki markup language
 	- update examples
 	- update config introduction
-	- first release version
 * 2020-10-16 1.0.0.b7
 	- refactor clipbord function
 	- update readme with more example
