@@ -401,6 +401,7 @@ endfunction
 
 " insert lint for different markup language
 function! s:markupLang.insertImageLink(img_url) dict
+    call s:logger.debugMsg('paste image finish!')
 	let file_type = self.detectMarkupLanguage()
 	if file_type ==? 'markdown'
 		execute 'normal! i![I'
@@ -595,8 +596,6 @@ function! pi2md#Pi2md(flag='c', item='')
 		endif
 	catch
 		call s:utilityTools.caught()
-	finally
-		call s:logger.debugMsg('paste image finish!')
 	endtry
 endfunction
 
