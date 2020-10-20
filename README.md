@@ -244,6 +244,10 @@ result:
 
 
 ## ChangeLog
+
+* 2020-10-20
+	- refactor continue
+	- text with double quotes to single quotes
 * 2020-10-19
 	- add check python envrionment function and error catch for python or python module
 	- update check settings function

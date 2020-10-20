@@ -1,23 +1,24 @@
-" vim:set ft=vim noet sts=4 sw=4 ts=4 tw=78:
+" vim:set ft=vim et sts=4 sw=4 ts=4 tw=78:
 "
 " pi2md.vim - Paste Image to markdown
 " Maintainer:    Vincent Wancocoding  <http://cocoding.cc>
 " Create date:		Sep 28, 2020
-" Update date:		Oct 18, 2020
+" Update date:		Oct 20, 2020
 "
 " Settings Example 
 " more example, please see readme
 "
 "
 " let g:pi2mdSettings = {
-" \ "debug": 1,
-" \ "storage": 0,
-" \ "storage_local_position_type": 0,
-" \ "storage_local_dir_name": "images",
-" \ "storage_local_absolute_path": "/User/yourname/your_images_path",
-" \ "storage_local_prefer_relative_path": 1,
-" \ "storage_cloud_tool": "picgo-core",
-" \ "storage_cloud_picgocore_path": "d:\develop\Scoop\apps\nodejs-lts\current\bin\picgo.cmd"
+" \ 'debug': 1,
+" \ 'storage': 0,
+" \ 'storage_local_position_type': 0,
+" \ 'storage_local_dir_name': 'images',
+" \ 'storage_local_absolute_path': '/User/yourname/your_images_path',
+" \ 'storage_local_prefer_relative_path': 1,
+" \ 'storage_cloud_tool': 'picgo-core',
+" \ 'storage_cloud_picgocore_path': 
+" \     'd:\develop\Scoop\apps\nodejs-lts\current\bin\picgo.cmd'
 " }
 
 
@@ -27,48 +28,54 @@
 
 " the configuration constraint
 let s:pi2mdConfigConstraint = {
-	\ "debug": {
-	\	"legalRange": [0, 1], 
-	\	"default": 1, 
-	\	"required": 1,
-	\	"errorMsg": "the value of debug config must be 0 or 1"}, 
-	\ "storage": { 
-	\	"legalRange": [0, 1], 
-	\	"default": 0, 
-	\	"required": 1,
-	\	"errorMsg": "the value of storage config must be 0 or 1"},
-	\ "storage_local_position_type": {
-	\	"legalRange": [0, 1], 
-	\	"default": 0, 
-	\	"required": 1,
-	\	"errorMsg": "the value of local position type config must be 0 or 1"},
-	\ "storage_local_prefer_relative_path": {
-	\	"legalRange": [0, 1], 
-	\	"default": 1, 
-	\	"required": 0,
-	\	"errorMsg": "the value of use relative path config must be 0 or 1"},
-	\ "storage_cloud_tool": {
-	\	"legalRange": ["picgo-core", "picgo", "upic"], 
-	\	"default": "picgo-core", 
-	\	"required": 0,
-	\	"depends": {"itemKey": "storage", "itemVal": 1},
-	\	"errorMsg": "the value of cloud lib config must be one of picgo-core, picgo or upic"},
-	\ "storage_cloud_picgocore_path": {
-	\	"default": "picgo-core", 
-	\	"required": 0,
-	\	"isPath": 1,
-	\	"depends": {"itemKey": "storage_cloud_tool", "itemVal": "picgo-core"},
-	\	"errorMsg": "you must define your picgo-core bin path, if you use cloud by picgo-core"}
+	\ 'debug': {
+	\	'legalRange': [0, 1], 
+	\	'default': 1, 
+	\	'required': 1,
+	\	'errorMsg': 'the value of debug config must be 0 or 1'}, 
+	\ 'storage': { 
+	\	'legalRange': [0, 1], 
+	\	'default': 0, 
+	\	'required': 1,
+	\	'errorMsg': 'the value of storage config must be 0 or 1'},
+	\ 'storage_local_position_type': {
+	\	'legalRange': [0, 1], 
+	\	'default': 0, 
+	\	'required': 1,
+	\	'errorMsg': 'the value of local position type config must be 0 or 1'},
+	\ 'storage_local_prefer_relative_path': {
+	\	'legalRange': [0, 1], 
+	\	'default': 1, 
+	\	'required': 0,
+	\	'errorMsg': 'the value of use relative path config must be 0 or 1'},
+	\ 'storage_cloud_tool': {
+	\	'legalRange': ['picgo-core', 'picgo', 'upic'], 
+	\	'default': 'picgo-core', 
+	\	'required': 0,
+	\	'depends': {'itemKey': 'storage', 'itemVal': 1},
+	\	'errorMsg': 'the value of cloud lib config must be one of picgo-core,
+			\ picgo or upic'},
+	\ 'storage_cloud_picgocore_path': {
+	\	'default': 'picgo-core', 
+	\	'required': 0,
+	\	'isPath': 1,
+	\	'depends': {'itemKey': 'storage_cloud_tool', 'itemVal': 'picgo-core'},
+	\	'errorMsg': 'you must define your picgo-core bin path,
+			\ if you use cloud by picgo-core'}
 \ }
 
 
 let s:Errors = {
-			\ "E-PIM-10": "Configuration error",
-			\ "E-PIM-11": "Configuration item error",
-			\ "E-PIM-12": "There are no images in your system clipbord!",
-			\ "E-PIM-13": "The python module \"PIL\" could not found, Please install it with pip",
-			\ "E-PIM-14": "Your system does not have python3 installed or python3 and python3x.dll are not in the PATH"
-			\ }
+	\ 'E-PIM-10': 'Configuration error',
+	\ 'E-PIM-11': 'Configuration item error',
+	\ 'E-PIM-12': 'There are no images in your system clipbord!',
+	\ 'E-PIM-13': 'The python module PIL could not found,
+		\ Please install it with pip',
+	\ 'E-PIM-14': 'Your system does not have python3 installed or
+		\ python3 and python3x.dll are not in the PATH',
+	\ 'E-PIM-15': 'Sorry, The filetype of current buffer
+		\ does not support right now'
+	\ }
 
 " ==========================================================
 " Init Variables " 
@@ -85,17 +92,18 @@ function! s:settings.initPi2md() dict
 		let g:pi2mdSettings['os'] = s:os
 
 		" get the pi2md plugin root absolute path
-		let s:pi2md_root_full_path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
+		let s:pi2md_root_full_path = fnamemodify(resolve(
+					\ expand('<sfile>:p')), ':h:h')
 		let g:pi2mdSettings['pi2md_root'] = s:pi2md_root_full_path
 	catch /.*/
 		call s:logger.errorMsg('Caught "' . v:exception . '" in [iniPi2md]')
-		throw "E-PIM-10"
+		throw 'E-PIM-10'
 	endtry
 endfunction
 
 function s:settings.checkPy3() dict
 	if !has('python3')
-		throw "E-PIM-14"
+		throw 'E-PIM-14'
 	endif
 	" check module
 	try
@@ -103,7 +111,7 @@ python3 << EOF
 import PIL
 EOF
 	catch 'Vim(python3):ModuleNotFoundError: No module named \'PIL\''
-		throw "E-PIM-13"
+		throw 'E-PIM-13'
 	endtry
 endfunction
 
@@ -112,19 +120,20 @@ function! s:settings.checkConfiguration() dict
 	if !exists('g:pi2mdSettings')
 		" setting some default configuration
 		let g:pi2mdSettings = {
-			\ "debug": 1,
-			\ "storage": 0,
-			\ "storage_local_position_type": 0,
-			\ "storage_local_dir_name": "images",
-			\ "storage_local_prefer_relative_path": 1}
+			\ 'debug': 1,
+			\ 'storage': 0,
+			\ 'storage_local_position_type': 0,
+			\ 'storage_local_dir_name': 'images',
+			\ 'storage_local_prefer_relative_path': 1}
 	else
 		" check configuration , make sure all settings are correct
 		for ckey in keys(s:pi2mdConfigConstraint)
 			try
 				call self.checkConfigItem(ckey)
 			catch /.*/ 
-				call s:logger.errorMsg('Caught "' . v:exception . '" in [checkConfiguration], error item is' . ckey)
-				throw "E-PIM-11"
+				call s:logger.errorMsg('Caught "' . v:exception .
+					\ '" in [checkConfiguration], error item is' . ckey)
+				throw 'E-PIM-11'
 			endtry
 		endfor
 	endif
@@ -138,14 +147,15 @@ function s:settings.checkConfigItem(itemKey) dict
 	" =================== check the config not defined
 	if !has_key(g:pi2mdSettings, a:itemKey) && settingConstraint.required == 1
 		" set default value if not exist
-		if has_key(settingConstraint, "default")
+		if has_key(settingConstraint, 'default')
 			let g:pi2mdSettings[a:itemKey] = settingConstraint.default
 		else
 			let hasError = 1
 		endif
-	elseif !has_key(g:pi2mdSettings, a:itemKey) && settingConstraint.required == 0
+	elseif !has_key(g:pi2mdSettings, a:itemKey)
+		\ && settingConstraint.required == 0
 		" check depends
-		if has_key(settingConstraint, "depends")
+		if has_key(settingConstraint, 'depends')
 			" get depends
 			let depends = settingConstraint.depends
 			" get depend key 
@@ -163,14 +173,14 @@ function s:settings.checkConfigItem(itemKey) dict
 		" varify its legitimacy
 		let userConfigItem = g:pi2mdSettings[a:itemKey]
 		" check value range
-		if has_key(settingConstraint, "legalRange")
+		if has_key(settingConstraint, 'legalRange')
 			let legalRang = settingConstraint.legalRange
 			if index(legalRang, userConfigItem) == -1
 				let hasError = 1
 			endif
 		endif
 		" check path exist
-		if has_key(settingConstraint, "isPath")
+		if has_key(settingConstraint, 'isPath')
 			if empty(glob(fnameescape(userConfigItem)))
 				let hasError = 1
 			endif
@@ -183,7 +193,8 @@ endfunction
 
 function! s:settings.getSetting(key) dict
 	if !has_key(g:pi2mdSettings, a:key)
-		s:logger.errorMsg(a:key . ' does not exist, please define it in your rc file')
+		s:logger.errorMsg(a:key . ' does not exist, 
+			\ please define it in your rc file')
 	else
 		return g:pi2mdSettings[a:key]
 	endif
@@ -196,7 +207,7 @@ endfunction
 let s:logger = {}
 
 function! s:logger.getPrefix(flag) dict
-	return '[Pi2md]-[' . a:flag . ']-[' . strftime("%d/%m/%y %H:%M:%S") . '] '
+	return '[Pi2md]-[' . a:flag . ']-[' . strftime('%d/%m/%y %H:%M:%S') . '] '
 endfunction
 
 function! s:logger.errorMsg(msg) dict
@@ -234,15 +245,15 @@ EOF
 	" let l:new_random = strftime("%Y-%m-%d-%H-%M-%S")
 	" return l:new_random
 	let uuid_string = py3eval('uuid_string')
-	let ts_string = strftime("%Y-%m-%d-%H-%M-%S")
+	let ts_string = strftime('%Y-%m-%d-%H-%M-%S')
 	let new_random = uuid_string . '-' . ts_string
 	return new_random
 endfunction
 
 " check windows subsystem for linux
 function! s:utilityTools.isWSL() dict
-    let lines = readfile("/proc/version")
-    if lines[0] =~ "Microsoft"
+    let lines = readfile('/proc/version')
+    if lines[0] =~ 'Microsoft'
         return 1
     endif
     return 0
@@ -250,8 +261,8 @@ endfunction
 
 function! s:utilityTools.detectOS() dict
 	if !exists('s:os')
-		if has("win64") || has("win32") || has("win16")
-			let s:os = "Windows"
+		if has('win64') || has('win32') || has('win16')
+			let s:os = 'Windows'
 			let s:separator_char = '\'
 		else
 			let s:separator_char = '/'
@@ -287,15 +298,18 @@ function s:fileHandler.getRelativePath(img_path) dict
 	call s:logger.debugMsg('current dir : ' . current_file_header_path)
 	call s:logger.debugMsg('image save dir : ' . img_file_header_path)
 	for path_i in img_path_list
-		if loop_index == (len(file_path_list) - 1) && path_i ==# file_path_list[loop_index]
+		if loop_index == (len(file_path_list) - 1) 
+			\ && path_i ==# file_path_list[loop_index]
 			let img_left_start_index = loop_index + 1
 			let img_left_path_list = img_path_list[img_left_start_index:]
-			let img_left_path_string = join(img_left_path_list, s:separator_char)
-			let img_relative_path = img_left_path_string . s:separator_char . img_name
+			let img_left_path_string = join(img_left_path_list,
+				\ s:separator_char)
+			let img_relative_path = img_left_path_string . 
+				\ s:separator_char . img_name
 			return img_relative_path
 		endif
 		
-		if s:os == "Windows"
+		if s:os == 'Windows'
 			if path_i !=? file_path_list[loop_index]
 				let not_equal_path_index = loop_index
 				break
@@ -322,7 +336,8 @@ function s:fileHandler.getRelativePath(img_path) dict
 	endwhile
 	let img_left_path_list = img_path_list[not_equal_path_index:]
 	let img_left_path_string = join(img_left_path_list, s:separator_char)
-	let img_relative_path = up_dir_string . img_left_path_string . s:separator_char . img_name
+	let img_relative_path = up_dir_string . img_left_path_string 
+		\ . s:separator_char . img_name
 	return img_relative_path
 endfunction
 
@@ -346,7 +361,8 @@ function! s:fileHandler.getLocalStoragePath(local_full_path) dict
 	endif
 endfunction
 
-" copy file from one path to another, del_source will decide whether to delete the 
+" copy file from one path to another,
+" del_source will decide whether to delete the 
 " source file
 function! s:fileHandler.copyFile(source, dest, del_source=1) dict
 
@@ -380,31 +396,32 @@ function! s:markupLang.detectMarkupLanguage() dict
 	if file_postfix ==? 'wiki'
 		return 'vimwiki'
 	endif
+	throw 'E-PIM-15'
 endfunction
 
 " insert lint for different markup language
 function! s:markupLang.insertImageLink(img_url) dict
 	let file_type = self.detectMarkupLanguage()
 	if file_type ==? 'markdown'
-		execute "normal! i![I"
+		execute 'normal! i![I'
 		let ipos = getcurpos()
-		execute "normal! amage](" . a:img_url . ")"
+		execute 'normal! amage](' . a:img_url . ')'
 		call setpos('.', ipos)
 		redraw | echo 'please enter the title of this image...'
-		execute "normal! ve\<C-g>"
+		execute 'normal! ve\<C-g>'
 	elseif file_type ==? 'rst'
-		execute "normal! i!.. |I"
+		execute 'normal! i!.. |I'
 		let ipos = getcurpos()
-		execute "normal! amage| image:: " . a:img_url
+		execute 'normal! amage| image:: ' . a:img_url
 		call setpos('.', ipos)
 		redraw | echo 'please enter the title of this image...'
-		execute "normal! ve\<C-g>"
+		execute 'normal! ve\<C-g>'
 	elseif file_type ==? 'vimwiki'
 		let vimwiki_flag = ''
 		if g:pi2mdSettings['storage'] == 0
 			let vimwiki_flag = 'file:'
 		endif
-		execute "normal! i!{{" . vimwiki_flag . a:img_url . "}}"
+		execute 'normal! i!{{' . vimwiki_flag . a:img_url . '}}'
 	endif
 	return
 endf
@@ -430,15 +447,15 @@ else:
 	tmpimg.save(vim.eval('save_to'), 'PNG', compress_level=9)
 EOF
 	catch 'Vim(python3):ModuleNotFoundError: No module named \'PIL\''
-		throw "E-PIM-13"
+		throw 'E-PIM-13'
 	catch /^Vim\%((\a\+)\)\=:E370:/
-		throw "E-PIM-14"
+		throw 'E-PIM-14'
 	endtry
 
 	let py_fun_error = py3eval('no_image_in_clip')
 	if py_fun_error == 1
 		call s:logger.warningMsg('No image in your system clipboard!')
-		throw "E-PIM-12"
+		throw 'E-PIM-12'
 	endif
 	return a:save_path
 endfunction
@@ -476,7 +493,8 @@ let s:localStorage = {}
 function! s:localStorage.saveToLocalStorage(source) dict
 	" get file name from source
 	let file_name = fnamemodify(a:source, ':p:t')
-	let file_dest_path = self.buildLocalStorageParentPath() . s:separator_char . file_name
+	let file_dest_path = self.buildLocalStorageParentPath() 
+		\ . s:separator_char . file_name
 	call s:fileHandler.copyFile(a:source, file_dest_path)
 	call s:logger.debugMsg('The final image local path is ' . file_dest_path)
 	let markup_link_url = s:fileHandler.getLocalStoragePath(file_dest_path)
@@ -487,16 +505,18 @@ endfunction
 function! s:localStorage.buildLocalStorageParentPath() dict
 	if s:settings.getSetting('storage_local_position_type') == 0
 		" use current dirctory
-		let local_save_parent_path = expand('%:p:h') . s:separator_char . s:settings.getSetting('storage_local_dir_name')
+		let local_save_parent_path = expand('%:p:h') . s:separator_char . 
+			\ s:settings.getSetting('storage_local_dir_name')
 	else
 		" use absolute path for local storage
-		let local_save_parent_path = settings.getSetting('g:pi2md_localstorage_path')
+		let local_save_parent_path = 
+			\ settings.getSetting('g:pi2md_localstorage_path')
 	endif
 	" make dir if not exists
 	if !isdirectory(local_save_parent_path)
         call mkdir(local_save_parent_path)
     endif
-	if s:os == "Darwin"
+	if s:os == 'Darwin'
         return local_save_parent_path
     else
         return fnameescape(local_save_parent_path)
@@ -568,7 +588,8 @@ function! pi2md#Pi2md(flag='c', item='')
 			call s:logger.debugMsg('paste image from your clipboard start!')
 			call s:pasteImageFromClipboard()
 		elseif a:flag ==? 'p'
-			call s:logger.debugMsg('paste image from your local file system start!')
+			call s:logger.debugMsg(
+				\ 'paste image from your local file system start!')
 		elseif a:flag ==? 'r'
 			call s:logger.debugMsg('paste image from a remote url start!')
 		endif
