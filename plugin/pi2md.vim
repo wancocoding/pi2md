@@ -87,7 +87,7 @@ function! s:settings.initPi2md() dict
 	try
 		" add more variables
 		call self.checkConfiguration()
-		call self.checkPy()
+		call self.checkPy3()
 		call s:utilityTools.detectOS()
 		let g:pi2mdSettings['os'] = s:os
 
@@ -369,7 +369,7 @@ function! s:fileHandler.copyFile(source, dest, del_source=1) dict
 python3 << EOF
 import shutil
 
-delete_source = vim.eval('a:del_source')
+delete_source = int(vim.eval('a:del_source'))
 if delete_source == 1:
 	shutil.move(vim.eval('a:source'), vim.eval('a:dest'))
 else:
