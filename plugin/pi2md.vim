@@ -74,7 +74,10 @@ let s:Errors = {
 	\ 'E-PIM-14': 'Your system does not have python3 installed or
 		\ python3 and python3x.dll are not in the PATH',
 	\ 'E-PIM-15': 'Sorry, The filetype of current buffer
-		\ does not support right now'
+		\ does not support right now',
+    \ 'E-PIM-16': 'An error occurred while proccessing files',
+    \ 'E-PIM-17': 'Upload to the cloud by picgo-core failed, 
+        \ please see the log messages.'
 	\ }
 
 " ==========================================================
@@ -236,6 +239,12 @@ function s:utilityTools.caught() dict
 	endif
 endfunction
 
+function s:utilityTools.trimPsOutput(originLine) dict
+    let realLine = substitute(a:originLine, '\%x00', '', 'g')
+    let realLine = substitute(realLine, '\%x0d', '', 'g')
+    return realLine
+endfunction
+
 function! s:utilityTools.uuid4() dict
 
 python3 << EOF
@@ -378,6 +387,20 @@ EOF
 
 endfunction
 
+function s:fileHandler.delete(filePath) dict
+    call s:logger.debugMsg('delete the temp file now!')
+    try
+python3 << EOF
+import os
+file_to_delete = vim.eval('a:filePath')
+if os.path.exists(file_to_delete):
+    os.remove(file_to_delete)
+EOF
+	catch /^Vim(python3):/
+        throw 'E-PIM-16'
+    endtry
+endfunction
+
 
 " ==========================================================
 " markup language tools
@@ -424,7 +447,6 @@ function! s:markupLang.insertImageLink(img_url) dict
 		endif
 		execute 'normal! i!{{' . vimwiki_flag . a:img_url . '}}'
 	endif
-	return
 endf
 
 
@@ -464,9 +486,11 @@ endfunction
 
 function! s:clipboardTools.getAndSaveClipBoardImageTemporary() dict
 	" get current dir and temp file_name
+    call s:logger.debugMsg('save image from clipboard temporary!')
 	let temp_file_name = s:utilityTools.uuid4() . '.png'
 	let temp_path = expand('%:p:h')
 	let temp_img_full_path = temp_path . s:separator_char . temp_file_name
+    call s:logger.debugMsg('the temp image file path is:' . temp_img_full_path)
 	return s:clipboardTools.getClipBoardImageAndSave(temp_img_full_path)
 endfunction
 
@@ -530,8 +554,45 @@ endfunction
 let s:cloudStorage = {}
 
 function s:cloudStorage.saveToCloudStorage(source) dict
+    let remote_img_url = ''
+    if g:pi2mdSettings['storage_cloud_tool'] ==? 'picgo-core'
+        let remote_img_url = self.uploadByPicgoCore(a:source)
+    endif
+    " finally delete the temp image file
+    call s:fileHandler.delete(a:source)
+    return remote_img_url
+endfunction
 
-	
+function s:cloudStorage.uploadByPicgoCore(source) dict
+    " build a upload command
+    let picgocore_upload_cmd = 
+        \ g:pi2mdSettings['storage_cloud_picgocore_path'] .
+        \ ' upload ' .
+        \ a:source
+    let picgocore_output_list = systemlist(picgocore_upload_cmd)
+    if g:pi2mdSettings.os ==? 'Windows' || has('win32')
+        " call s:logger.debugMsg('the system list output length is: ' . len(picgocore_output_list))
+        let currentIndex = 0
+        for oriMsg in picgocore_output_list
+            let windowsPicgoCoreOutput = s:utilityTools.trimPsOutput(oriMsg)
+            call s:logger.debugMsg(windowsPicgoCoreOutput)
+            let isSuccessIndex = match(windowsPicgoCoreOutput, 'Picgo\ SUCCESS')
+            if isSuccessIndex > 0
+                " get url index of list
+                let successReturnUrlIndex = currentIndex + 1
+                let returnUrlString = s:utilityTools.trimPsOutput(picgocore_output_list[successReturnUrlIndex])
+                call s:logger.debugMsg(returnUrlString)
+                return returnUrlString
+            elseif currentIndex == len(picgocore_output_list) - 1
+                " upload to picgo failed
+                throw 'E-PIM-17'
+            endif
+            let currentIndex += 1
+        endfor
+    else
+        let output_file_remote_url = picgocore_output_list[-1]
+        return output_file_remote_url
+    endif
 endfunction
 
 
@@ -555,7 +616,6 @@ function! s:pasteImageFromClipboard()
 	endif
 	" write link for markup language
 	call s:markupLang.insertImageLink(final_img_url)	
-	return
 endfunction
 
 
