@@ -247,6 +247,7 @@ result:
 
 * 2020-10-21
 	- fix win32 power shell output with special char
+	- update execute command quotes
 * 2020-10-20
 	- refactor continue
 	- text with double quotes to single quotes

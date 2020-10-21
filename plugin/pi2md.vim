@@ -427,25 +427,25 @@ function! s:markupLang.insertImageLink(img_url) dict
     call s:logger.debugMsg('paste image finish!')
 	let file_type = self.detectMarkupLanguage()
 	if file_type ==? 'markdown'
-		execute 'normal! i![I'
+		execute "normal! i![I"
 		let ipos = getcurpos()
-		execute 'normal! amage](' . a:img_url . ')'
+		execute "normal! amage](" . a:img_url . ")"
 		call setpos('.', ipos)
 		redraw | echo 'please enter the title of this image...'
-		execute 'normal! ve\<C-g>'
+		execute "normal! ve\<C-g>"
 	elseif file_type ==? 'rst'
-		execute 'normal! i!.. |I'
+		execute "normal! i!.. |I"
 		let ipos = getcurpos()
-		execute 'normal! amage| image:: ' . a:img_url
+		execute "normal! amage| image:: " . a:img_url
 		call setpos('.', ipos)
 		redraw | echo 'please enter the title of this image...'
-		execute 'normal! ve\<C-g>'
+		execute "normal! ve\<C-g>"
 	elseif file_type ==? 'vimwiki'
 		let vimwiki_flag = ''
 		if g:pi2mdSettings['storage'] == 0
 			let vimwiki_flag = 'file:'
 		endif
-		execute 'normal! i!{{' . vimwiki_flag . a:img_url . '}}'
+		execute "normal! i!{{" . vimwiki_flag . a:img_url . "}}"
 	endif
 endf
 
