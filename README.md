@@ -197,6 +197,67 @@ let g:pi2md_localstorage_prefer_relative = 0
 " (optional) defaut: 0, 1: try to use relative path first
 ```
 
+### Picgo app config
+
+see: [Picgo Guide - Configuration](https://picgo.github.io/PicGo-Doc/en/guide/config.html)
+
+Where is picgo config file
+
+* windows: `%APPDATA%\picgo\data.json`
+* Linux: `$XDG_CONFIG_HOME/picgo/data.json` or `~/.config/picgo/data.json`
+* macOS: `~/Library/Application\ Support/picgo/data.json`
+
+An exaple on windows picgo app, `data.json`
+```
+
+{
+  "uploaded": [],
+  "picBed": {
+    "current": "aliyun",
+    "uploader": "aliyun",
+    "smms": {
+      "token": ""
+    },
+    "aliyun": {
+      "accessKeyId": "your akid",
+      "accessKeySecret": "your aks",
+      "area": "your oss region",
+      "bucket": "your bucket name",
+      "customUrl": "http://yourdomain",
+      "options": "",
+      "path": "your/custom/path"
+    }
+  },
+  "settings": {
+    "shortKey": {
+      "picgo:upload": {
+        "enable": true,
+        "key": "CommandOrControl+Shift+P",
+        "name": "upload",
+        "label": "快捷上传"
+      }
+    },
+    "server": {
+      "port": 36677,
+      "host": "127.0.0.1",
+      "enable": true
+    },
+    "showUpdateTip": true,
+    "customLink": "$url"
+  },
+  "picgoPlugins": {
+    "picgo-plugin-rename-file": true
+  },
+  "debug": true,
+  "PICGO_ENV": "GUI",
+  "needReload": false,
+  "picgo-plugin-rename-file": {
+    "format": "{y}/{m}/{d}/{hash}-{timestamp}"
+  }
+}
+```
+
+
 ## Example
 
 ### 1. Save image in current folder and use relative path(Clipboard)

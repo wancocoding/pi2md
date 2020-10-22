@@ -56,12 +56,19 @@ let s:pi2mdConfigConstraint = {
 	\	'errorMsg': 'the value of cloud lib config must be one of picgo-core,
 			\ picgo or upic'},
 	\ 'storage_cloud_picgocore_path': {
-	\	'default': 'picgo-core', 
+	\	'default': 'picgo', 
 	\	'required': 0,
 	\	'isPath': 1,
 	\	'depends': {'itemKey': 'storage_cloud_tool', 'itemVal': 'picgo-core'},
 	\	'errorMsg': 'you must define your picgo-core bin path,
-			\ if you use cloud by picgo-core'}
+			\ if you use cloud by picgo-core'},
+    \ 'storage_cloud_picgoapp_node_path': {
+        \ 'default': 'node',
+        \ 'required': 0,
+        \ 'isPath': 1,
+        \ 'depends': {'itemKey': 'storage_cloud_tool', 'itemVal': 'picgo'},
+        \ 'errorMsg': 'you must define the right nodejs bin path,
+            \ if you want to use picgo app'}
 \ }
 
 
@@ -77,7 +84,10 @@ let s:Errors = {
 		\ does not support right now',
     \ 'E-PIM-16': 'An error occurred while proccessing files',
     \ 'E-PIM-17': 'Upload to the cloud by picgo-core failed, 
-        \ please see the log messages.'
+        \ please see the log messages.',
+    \ 'E-PIM-18': 'Picgo App upload failed, please check your picgo config,
+        \ or report issue',
+    \ 'E-PIM-19': 'Picgo App upload failed'
 	\ }
 
 " ==========================================================
@@ -557,6 +567,9 @@ function s:cloudStorage.saveToCloudStorage(source) dict
     let remote_img_url = ''
     if g:pi2mdSettings['storage_cloud_tool'] ==? 'picgo-core'
         let remote_img_url = self.uploadByPicgoCore(a:source)
+    elseif g:pi2mdSettings['storage_cloud_tool'] ==? 'picgo'
+        " use picgo app api
+        let remote_img_url = self.uploadByPicgoApp(a:source)
     endif
     " finally delete the temp image file
     call s:fileHandler.delete(a:source)
@@ -564,6 +577,7 @@ function s:cloudStorage.saveToCloudStorage(source) dict
 endfunction
 
 function s:cloudStorage.uploadByPicgoCore(source) dict
+    call s:logger.debugMsg('upload image by picgo-core')
     " build a upload command
     let picgocore_upload_cmd = 
         \ g:pi2mdSettings['storage_cloud_picgocore_path'] .
@@ -593,6 +607,58 @@ function s:cloudStorage.uploadByPicgoCore(source) dict
         let output_file_remote_url = picgocore_output_list[-1]
         return output_file_remote_url
     endif
+endfunction
+
+
+function! s:cloudStorage.buildPicgoAppCmd(source) dict
+    let picgo_node_script_path = g:pi2mdSettings['pi2md_root'] . s:separator_char . 'scripts' . s:separator_char . 'picgo.js'
+    if a:source ==# ''
+		let picgo_upload_cmd = g:pi2mdSettings['storage_cloud_picgoapp_node_path'] . ' ' . picgo_node_script_path
+        call s:logger.debugMsg('the picgo app upload cmd is ' . picgo_upload_cmd)
+		return picgo_upload_cmd
+	endif
+endfunction
+
+function! s:cloudStorage.uploadByPicgoApp(source) dict
+    call s:logger.debugMsg('upload image by picgo app')
+    try
+        let picgoapp_upload_cmd = self.buildPicgoAppCmd('')
+        let picgoappCmdResultList = systemlist(picgoapp_upload_cmd)
+        let image_url_result = self.getPicgoAppResultFromCmdOutputList(picgoappCmdResultList)
+        call s:logger.debugMsg('upload image by Picgo app success!')
+        return image_url_result
+    catch 'E-PIM-18' 
+        throw 'E-PIM-18'
+    catch /.*/
+        throw 'E-PIM-19'
+    finally
+        call s:fileHandler.delete(a:source)
+    endtry
+endfunction
+
+function! s:cloudStorage.getPicgoAppResultFromCmdOutputList(resultList) dict
+    let resultIndex = 0
+    let currentIndex = 0
+    call s:logger.debugMsg(len(a:resultList))
+    for outputLine in a:resultList
+        call s:logger.debugMsg(outputLine)
+        let cleanLine = s:utilityTools.trimPsOutput(outputLine)
+        call s:logger.debugMsg('the output msg line is: ' . cleanLine)
+        let isSuccessIndex = match(cleanLine, 'Picgo\ SUCCESS')
+        let isFailed = match(cleanLine, 'Picgo\ ERROR')
+        " upload success
+        if isSuccessIndex > 0
+            " the result line index
+            let resultIndex =currentIndex + 1
+            break
+        elseif isFailed > 0
+            throw 'E-PIM-18'
+        endif
+        let currentIndex += 1
+    endfor
+    " get result
+    let successResult = utilityTools.trimPsOutput(resultIndex)
+    return successResult
 endfunction
 
 
