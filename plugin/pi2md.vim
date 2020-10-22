@@ -93,6 +93,7 @@ let s:Errors = {
 " ==========================================================
 " Init Variables " 
 " ==========================================================
+let s:scriptRoot = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
 
 let s:settings = {}
 
@@ -105,9 +106,9 @@ function! s:settings.initPi2md() dict
 		let g:pi2mdSettings['os'] = s:os
 
 		" get the pi2md plugin root absolute path
-		let s:pi2md_root_full_path = fnamemodify(resolve(
-					\ expand('<sfile>:p')), ':h:h')
-		let g:pi2mdSettings['pi2md_root'] = s:pi2md_root_full_path
+		" let s:pi2md_root_full_path = fnamemodify(resolve(
+		" 			\ expand('<sfile>:p')), ':h:h')
+		let g:pi2mdSettings['pi2md_root'] = s:scriptRoot
 	catch /.*/
 		call s:logger.errorMsg('Caught "' . v:exception . '" in [iniPi2md]')
 		throw 'E-PIM-10'
@@ -571,42 +572,51 @@ function s:cloudStorage.saveToCloudStorage(source) dict
         " use picgo app api
         let remote_img_url = self.uploadByPicgoApp(a:source)
     endif
-    " finally delete the temp image file
-    call s:fileHandler.delete(a:source)
     return remote_img_url
 endfunction
 
 function s:cloudStorage.uploadByPicgoCore(source) dict
     call s:logger.debugMsg('upload image by picgo-core')
     " build a upload command
-    let picgocore_upload_cmd = 
-        \ g:pi2mdSettings['storage_cloud_picgocore_path'] .
-        \ ' upload ' .
-        \ a:source
-    let picgocore_output_list = systemlist(picgocore_upload_cmd)
-    if g:pi2mdSettings.os ==? 'Windows' || has('win32')
-        " call s:logger.debugMsg('the system list output length is: ' . len(picgocore_output_list))
-        let currentIndex = 0
-        for oriMsg in picgocore_output_list
-            let windowsPicgoCoreOutput = s:utilityTools.trimPsOutput(oriMsg)
-            call s:logger.debugMsg(windowsPicgoCoreOutput)
-            let isSuccessIndex = match(windowsPicgoCoreOutput, 'Picgo\ SUCCESS')
-            if isSuccessIndex > 0
-                " get url index of list
-                let successReturnUrlIndex = currentIndex + 1
-                let returnUrlString = s:utilityTools.trimPsOutput(picgocore_output_list[successReturnUrlIndex])
-                call s:logger.debugMsg(returnUrlString)
-                return returnUrlString
-            elseif currentIndex == len(picgocore_output_list) - 1
-                " upload to picgo failed
-                throw 'E-PIM-17'
-            endif
-            let currentIndex += 1
-        endfor
-    else
-        let output_file_remote_url = picgocore_output_list[-1]
-        return output_file_remote_url
-    endif
+    try
+        let picgocore_upload_cmd = 
+            \ g:pi2mdSettings['storage_cloud_picgocore_path'] .
+            \ ' upload ' .
+            \ a:source
+        let picgoApiCmdResult= systemlist(picgocore_upload_cmd)
+        let image_url_result = self.getPicgoResult(picgoApiCmdResult)
+        call s:logger.debugMsg('upload image by Picgo app success!')
+        return image_url_result
+    catch 'E-PIM-18' 
+        throw 'E-PIM-18'
+    finally
+        " finally delete the temp image file
+        call s:fileHandler.delete(a:source)
+    endtry
+
+    " if g:pi2mdSettings.os ==? 'Windows' || has('win32')
+    "     " call s:logger.debugMsg('the system list output length is: ' . len(picgocore_output_list))
+    "     let currentIndex = 0
+    "     for oriMsg in picgocore_output_list
+    "         let windowsPicgoCoreOutput = s:utilityTools.trimPsOutput(oriMsg)
+    "         call s:logger.debugMsg(windowsPicgoCoreOutput)
+    "         let isSuccessIndex = match(windowsPicgoCoreOutput, 'Picgo\ SUCCESS')
+    "         if isSuccessIndex > 0
+    "             " get url index of list
+    "             let successReturnUrlIndex = currentIndex + 1
+    "             let returnUrlString = s:utilityTools.trimPsOutput(picgocore_output_list[successReturnUrlIndex])
+    "             call s:logger.debugMsg(returnUrlString)
+    "             return returnUrlString
+    "         elseif currentIndex == len(picgocore_output_list) - 1
+    "             " upload to picgo failed
+    "             throw 'E-PIM-17'
+    "         endif
+    "         let currentIndex += 1
+    "     endfor
+    " else
+    "     let output_file_remote_url = picgocore_output_list[-1]
+    "     return output_file_remote_url
+    " endif
 endfunction
 
 
@@ -623,42 +633,41 @@ function! s:cloudStorage.uploadByPicgoApp(source) dict
     call s:logger.debugMsg('upload image by picgo app')
     try
         let picgoapp_upload_cmd = self.buildPicgoAppCmd('')
-        let picgoappCmdResultList = systemlist(picgoapp_upload_cmd)
-        let image_url_result = self.getPicgoAppResultFromCmdOutputList(picgoappCmdResultList)
+        " let picgoappCmdResultList = system(picgoapp_upload_cmd)
+        " let @r = system(picgoapp_upload_cmd)
+        let picgoApiCmdResult = systemlist(picgoapp_upload_cmd)
+        let image_url_result = self.getPicgoResult(picgoApiCmdResult)
         call s:logger.debugMsg('upload image by Picgo app success!')
         return image_url_result
     catch 'E-PIM-18' 
         throw 'E-PIM-18'
-    catch /.*/
-        throw 'E-PIM-19'
     finally
         call s:fileHandler.delete(a:source)
     endtry
 endfunction
 
-function! s:cloudStorage.getPicgoAppResultFromCmdOutputList(resultList) dict
-    let resultIndex = 0
-    let currentIndex = 0
-    call s:logger.debugMsg(len(a:resultList))
-    for outputLine in a:resultList
-        call s:logger.debugMsg(outputLine)
-        let cleanLine = s:utilityTools.trimPsOutput(outputLine)
-        call s:logger.debugMsg('the output msg line is: ' . cleanLine)
-        let isSuccessIndex = match(cleanLine, 'Picgo\ SUCCESS')
-        let isFailed = match(cleanLine, 'Picgo\ ERROR')
-        " upload success
-        if isSuccessIndex > 0
-            " the result line index
-            let resultIndex =currentIndex + 1
-            break
-        elseif isFailed > 0
-            throw 'E-PIM-18'
+function! s:cloudStorage.getPicgoResult(resultList)
+    if len(a:resultList) == 1
+        call s:logger.debugMsg('the picgo api result is: ' . a:resultList[0])
+        if match(firstLine, '^http[s]\?:\/\/.\?') >= 0
+            return firstLine
         endif
-        let currentIndex += 1
-    endfor
-    " get result
-    let successResult = utilityTools.trimPsOutput(resultIndex)
-    return successResult
+    elseif len(a:resultList) > 1
+        let resultIndex = 0
+        let currentIndex = 0
+        for lineText in a:resultList
+            if match(lineText, 'Picgo\ SUCCESS') > 0
+                let resultIndex = currentIndex + 1
+                return a:resultList[resultIndex]
+            elseif match(lineText, 'Picgo\ ERROR') > 0
+                throw 'E-PIM-18'
+            endif
+            let currentIndex += 1
+        endfor
+        throw 'E-PIM-18'
+    endif
+    call s:logger.errorMsg('error occurred when call picgo api')
+    throw 'E-PIM-19'
 endfunction
 
 

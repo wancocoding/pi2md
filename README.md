@@ -305,7 +305,8 @@ result:
 
 
 ## ChangeLog
-
+* 2020-10-23
+	- finish upload image by picgo app with api
 * 2020-10-21
 	- fix win32 power shell output with special char
 	- update execute command quotes
