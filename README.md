@@ -306,6 +306,7 @@ result:
 
 ## ChangeLog
 * 2020-10-23
+	- fix invalid argument for Neovim
 	- finish upload image by picgo app with api
 * 2020-10-21
 	- fix win32 power shell output with special char

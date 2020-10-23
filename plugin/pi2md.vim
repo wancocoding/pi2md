@@ -87,7 +87,8 @@ let s:Errors = {
         \ please see the log messages.',
     \ 'E-PIM-18': 'Picgo App upload failed, please check your picgo config,
         \ or report issue',
-    \ 'E-PIM-19': 'Picgo App upload failed'
+    \ 'E-PIM-19': 'Picgo App upload failed',
+    \ 'E-PIM-20': 'Invalid argument for Pi2md!'
 	\ }
 
 " ==========================================================
@@ -384,12 +385,13 @@ endfunction
 " copy file from one path to another,
 " del_source will decide whether to delete the 
 " source file
-function! s:fileHandler.copyFile(source, dest, del_source=1) dict
+function! s:fileHandler.copyFile(source, dest, del_source) dict
 
+let deleteSource = get(a:, 2, 1)
 python3 << EOF
 import shutil
 
-delete_source = int(vim.eval('a:del_source'))
+delete_source = int(vim.eval('deleteSource'))
 if delete_source == 1:
 	shutil.move(vim.eval('a:source'), vim.eval('a:dest'))
 else:
@@ -717,16 +719,22 @@ endfunction
 " Main function and commands
 " ==========================================================
 
-function! pi2md#Pi2md(flag='c', item='') 
+function! pi2md#Pi2md(...) 
 	try
+        if a:0 > 0 && a:0 <=2
+            let methodFlag = a:000[0] == '' ? 'c' : a:000[0]
+            call s:logger.debugMsg('the command argument is:[' . methodFlag . ']')
+        else
+            throw 'E-PIM-20'
+        endif
 		call s:settings.initPi2md()
-		if a:flag ==? 'c'
+		if methodFlag ==? 'c'
 			call s:logger.debugMsg('paste image from your clipboard start!')
 			call s:pasteImageFromClipboard()
-		elseif a:flag ==? 'p'
+		elseif methodFlag ==? 'p'
 			call s:logger.debugMsg(
 				\ 'paste image from your local file system start!')
-		elseif a:flag ==? 'r'
+		elseif methodFlag ==? 'r'
 			call s:logger.debugMsg('paste image from a remote url start!')
 		endif
 	catch
@@ -738,5 +746,5 @@ endfunction
 " Bind Commands
 " ==========================================================
 
-command! -nargs=* Pi2md call pi2md#Pi2md(<f-args>)
+command! -nargs=* Pi2md call pi2md#Pi2md(<q-args>)
 
