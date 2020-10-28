@@ -88,7 +88,8 @@ let s:Errors = {
     \ 'E-PIM-18': 'Picgo App upload failed, please check your picgo config,
         \ or report issue',
     \ 'E-PIM-19': 'Picgo App upload failed',
-    \ 'E-PIM-20': 'Invalid argument for Pi2md!'
+    \ 'E-PIM-20': 'Invalid argument for Pi2md!',
+    \ 'E-PIM-21': 'The image file does not exist!'
 	\ }
 
 " ==========================================================
@@ -294,10 +295,14 @@ endfunction
 
 " Deprecated use command args instead
 function! s:utilityTools.inputName() dict
-    call inputsave()
-    let name = input('Image name: ')
+    redraw | call inputsave()
+    let image_path = input('Enter your image path: ')
     call inputrestore()
-    return name
+    let image_path = fnameescape(image_path)
+    if empty(glob(image_path))
+        throw 'E-PIM-21'
+    endif
+    return image_path
 endfunction
 
 
@@ -385,9 +390,9 @@ endfunction
 " copy file from one path to another,
 " del_source will decide whether to delete the 
 " source file
-function! s:fileHandler.copyFile(source, dest, del_source) dict
+function! s:fileHandler.copyFile(source, dest, ...) dict
 
-let deleteSource = get(a:, 2, 1)
+let deleteSource = get(a:, 1, 1)
 python3 << EOF
 import shutil
 
@@ -513,12 +518,6 @@ endfunction
 " 3rd part cloud lib functions
 " ==========================================================
 
-" ------ picgo-core functions
-
-
-
-" ------ picgo functions
-
 
 " ------ upic functions
 
@@ -528,12 +527,13 @@ endfunction
 
 let s:localStorage = {}
 
-function! s:localStorage.saveToLocalStorage(source) dict
+function! s:localStorage.saveToLocalStorage(source, ...) dict
+    let deleteSource = get(a:, 1, 1)
 	" get file name from source
 	let file_name = fnamemodify(a:source, ':p:t')
 	let file_dest_path = self.buildLocalStorageParentPath() 
 		\ . s:separator_char . file_name
-	call s:fileHandler.copyFile(a:source, file_dest_path)
+	call s:fileHandler.copyFile(a:source, file_dest_path, deleteSource)
 	call s:logger.debugMsg('The final image local path is ' . file_dest_path)
 	let markup_link_url = s:fileHandler.getLocalStoragePath(file_dest_path)
 	return markup_link_url
@@ -566,18 +566,20 @@ endfunction
 
 let s:cloudStorage = {}
 
-function s:cloudStorage.saveToCloudStorage(source) dict
+function s:cloudStorage.saveToCloudStorage(source, ...) dict
+    let deleteSource = get(a:, 1, 1)
     let remote_img_url = ''
     if g:pi2mdSettings['storage_cloud_tool'] ==? 'picgo-core'
-        let remote_img_url = self.uploadByPicgoCore(a:source)
+        let remote_img_url = self.uploadByPicgoCore(a:source, deleteSource)
     elseif g:pi2mdSettings['storage_cloud_tool'] ==? 'picgo'
         " use picgo app api
-        let remote_img_url = self.uploadByPicgoApp(a:source)
+        let remote_img_url = self.uploadByPicgoApp(a:source, deleteSource)
     endif
     return remote_img_url
 endfunction
 
-function s:cloudStorage.uploadByPicgoCore(source) dict
+function s:cloudStorage.uploadByPicgoCore(source, ...) dict
+    let deleteSource = get(a:, 1, 1)
     call s:logger.debugMsg('upload image by picgo-core')
     " build a upload command
     try
@@ -593,7 +595,9 @@ function s:cloudStorage.uploadByPicgoCore(source) dict
         throw 'E-PIM-18'
     finally
         " finally delete the temp image file
-        call s:fileHandler.delete(a:source)
+        if deleteSource == 1
+            call s:fileHandler.delete(a:source)
+        endif
     endtry
 
     " if g:pi2mdSettings.os ==? 'Windows' || has('win32')
@@ -631,7 +635,8 @@ function! s:cloudStorage.buildPicgoAppCmd(source) dict
 	endif
 endfunction
 
-function! s:cloudStorage.uploadByPicgoApp(source) dict
+function! s:cloudStorage.uploadByPicgoApp(source, ...) dict
+    let deleteSource = get(a:, 1, 1)
     call s:logger.debugMsg('upload image by picgo app')
     try
         let picgoapp_upload_cmd = self.buildPicgoAppCmd('')
@@ -644,13 +649,16 @@ function! s:cloudStorage.uploadByPicgoApp(source) dict
     catch 'E-PIM-18' 
         throw 'E-PIM-18'
     finally
-        call s:fileHandler.delete(a:source)
+        if deleteSource == 1
+            call s:fileHandler.delete(a:source)
+        endif
     endtry
 endfunction
 
 function! s:cloudStorage.getPicgoResult(resultList)
     if len(a:resultList) == 1
-        call s:logger.debugMsg('the picgo api result is: ' . a:resultList[0])
+        let firstLine = a:resultList[0] 
+        call s:logger.debugMsg('the picgo api result is: ' . firstLine)
         if match(firstLine, '^http[s]\?:\/\/.\?') >= 0
             return firstLine
         endif
@@ -673,6 +681,24 @@ function! s:cloudStorage.getPicgoResult(resultList)
 endfunction
 
 
+function! s:pasteImage(source, ...)
+    let deleteSource = get(a:, 1, 1)
+	" upload to cloud or save to local
+	let final_img_url = 'your link'
+	if s:settings.getSetting('storage') == 0
+		" local storage
+		call s:logger.debugMsg('use local storage')
+		let final_img_url = s:localStorage.saveToLocalStorage(
+            \ a:source, deleteSource)
+	elseif s:settings.getSetting('storage') == 1
+		call s:logger.debugMsg('use cloud storage')
+		" cloud storage
+		let final_img_url = s:cloudStorage.saveToCloudStorage(
+            \ a:source, deleteSource)
+	endif
+    return final_img_url
+endfunction
+
 " ==========================================================
 " Paste from clipboard 
 " ==========================================================
@@ -680,17 +706,7 @@ endfunction
 function! s:pasteImageFromClipboard()
 	" save image to temp file
 	let temp_img_file = s:clipboardTools.getAndSaveClipBoardImageTemporary()
-	" upload to cloud or save to local
-	let final_img_url = 'your link'
-	if s:settings.getSetting('storage') == 0
-		" local storage
-		call s:logger.debugMsg('paste from clipboard to local storage')
-		let final_img_url = s:localStorage.saveToLocalStorage(temp_img_file)
-	elseif s:settings.getSetting('storage') == 1
-		call s:logger.debugMsg('paste from clipboard to cloud storage')
-		" cloud storage
-		let final_img_url = s:cloudStorage.saveToCloudStorage(temp_img_file)
-	endif
+	let final_img_url = s:pasteImage(temp_img_file, 1)
 	" write link for markup language
 	call s:markupLang.insertImageLink(final_img_url)	
 endfunction
@@ -711,7 +727,12 @@ endfunction
 
 
 function! s:pasteImageFromLocalPath()
-	" 
+	" wait for user input
+    let image_file = s:utilityTools.inputName()
+    let final_img_url = s:pasteImage(image_file, 0)
+	" write link for markup language
+	call s:markupLang.insertImageLink(final_img_url)	
+    return
 endfunction
 
 
@@ -734,6 +755,7 @@ function! pi2md#Pi2md(...)
 		elseif methodFlag ==? 'p'
 			call s:logger.debugMsg(
 				\ 'paste image from your local file system start!')
+            call s:pasteImageFromLocalPath()
 		elseif methodFlag ==? 'r'
 			call s:logger.debugMsg('paste image from a remote url start!')
 		endif

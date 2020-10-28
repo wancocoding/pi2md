@@ -29,7 +29,7 @@ Both of `Vim` and `NeoVim` can use this plugin
 **You can upload image** from
 
 * [x] Clipboard
-* [ ] Local file(path)
+* [x] Local file(path)
 * [ ] Remote Url
 
 **Support OS**
@@ -42,8 +42,8 @@ Both of `Vim` and `NeoVim` can use this plugin
 **Support Markup Language**
 
 * [x] [Markdown](https://daringfireball.net/projects/markdown/)
-* [ ] [Vimwiki](https://github.com/vimwiki/vimwiki)
-* [ ] [reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html)
+* [x] [Vimwiki](https://github.com/vimwiki/vimwiki)
+* [x] [reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html)
 
 **Support Storage**
 
@@ -89,7 +89,7 @@ Both of `Vim` and `NeoVim` can use this plugin
 
 #### Pillow
 
-You must install python3 and enable python3 
+You must install python3 and enable python3 for your vim/neovim
 support for your vim, and then install [Pillow](https://github.com/python-pillow/Pillow) 
 
 For `Win32/64` or `Win10` User, before `pip install`
@@ -305,6 +305,9 @@ result:
 
 
 ## ChangeLog
+* 2020-10-28
+	- add local image path support
+	- Compatible with neovim function argument
 * 2020-10-23
 	- fix invalid argument for Neovim
 	- finish upload image by picgo app with api
@@ -384,4 +387,3 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
