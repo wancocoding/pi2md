@@ -305,6 +305,12 @@ result:
 
 
 ## ChangeLog
+* 2020-10-29
+	- update node script
+	- add function to detect picgo api service
+	- set default value for not required config which has depneds and it has been setup already
+	- picgo app support local image upload
+	- set shell for vim script before run `system` or `systemlist` 
 * 2020-10-28
 	- add local image path support
 	- Compatible with neovim function argument

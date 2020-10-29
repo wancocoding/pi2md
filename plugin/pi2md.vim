@@ -68,7 +68,13 @@ let s:pi2mdConfigConstraint = {
         \ 'isPath': 1,
         \ 'depends': {'itemKey': 'storage_cloud_tool', 'itemVal': 'picgo'},
         \ 'errorMsg': 'you must define the right nodejs bin path,
-            \ if you want to use picgo app'}
+            \ if you want to use picgo app'},
+    \ 'storage_cloud_picgoapp_api_server_port': {
+        \ 'default': '36677',
+        \ 'required': 0,
+        \ 'depends': {'itemKey': 'storage_cloud_tool', 'itemVal': 'picgo'},
+        \ 'errorMsg': 'the picgo api server default port is [36677],
+            \ if not, please set port in your settings!'}
 \ }
 
 
@@ -77,19 +83,21 @@ let s:Errors = {
 	\ 'E-PIM-11': 'Configuration item error',
 	\ 'E-PIM-12': 'There are no images in your system clipbord!',
 	\ 'E-PIM-13': 'The python module PIL could not found,
-		\ Please install it with pip',
+	\   Please install it with pip',
 	\ 'E-PIM-14': 'Your system does not have python3 installed or
-		\ python3 and python3x.dll are not in the PATH',
+	\   python3 and python3x.dll are not in the PATH',
 	\ 'E-PIM-15': 'Sorry, The filetype of current buffer
-		\ does not support right now',
+	\   does not support right now',
     \ 'E-PIM-16': 'An error occurred while proccessing files',
     \ 'E-PIM-17': 'Upload to the cloud by picgo-core failed, 
-        \ please see the log messages.',
+    \   please see the log messages.',
     \ 'E-PIM-18': 'Picgo App upload failed, please check your picgo config,
-        \ or report issue',
+    \   or report issue',
     \ 'E-PIM-19': 'Picgo App upload failed',
     \ 'E-PIM-20': 'Invalid argument for Pi2md!',
-    \ 'E-PIM-21': 'The image file does not exist!'
+    \ 'E-PIM-21': 'The image file does not exist!',
+    \ 'E-PIM-22': 'The picgo server is not available,
+    \   please check your settings'
 	\ }
 
 " ==========================================================
@@ -180,7 +188,11 @@ function s:settings.checkConfigItem(itemKey) dict
 			" if depends defined , item must not be empty
 			if has_key(g:pi2mdSettings, dependKey) 
 				if g:pi2mdSettings[dependKey] == dependVal
-					let hasError = 1
+                    if has_key(settingConstraint, 'default')
+                        let g:pi2mdSettings[a:itemKey] = settingConstraint.default
+                    else
+                        let hasError = 1
+                    endif
 				endif
 			endif
 		endif
@@ -215,6 +227,10 @@ function! s:settings.getSetting(key) dict
 		return g:pi2mdSettings[a:key]
 	endif
 endfunction
+" ==========================================================
+" Call System Command func
+" ==========================================================
+
 
 " ==========================================================
 " Utility Func
@@ -293,7 +309,6 @@ function! s:utilityTools.detectOS() dict
 	endif
 endfunction
 
-" Deprecated use command args instead
 function! s:utilityTools.inputName() dict
     redraw | call inputsave()
     let image_path = input('Enter your image path: ')
@@ -303,6 +318,42 @@ function! s:utilityTools.inputName() dict
         throw 'E-PIM-21'
     endif
     return image_path
+endfunction
+
+function! s:utilityTools.detectPicgoApiServerPort() dict
+    let picgoApiServerPort = s:settings.getSetting(
+        \ 'storage_cloud_picgoapp_api_server_port')
+    call s:logger.debugMsg('checking the picgo api server, port is :' 
+        \ . picgoApiServerPort)
+python3 << EOF
+
+import socket
+import vim
+
+ip_addr = '127.0.0.1'
+port = vim.eval('picgoApiServerPort')
+
+detectSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+detectSocket.settimeout(3)
+
+detectTarget = (ip_addr, int(port))
+
+serverPortAvailable = 'NO'
+try:
+    result = detectSocket.connect_ex(detectTarget)
+    if result == 0:
+        # connect to server success
+        serverPortAvailable = 'YES'
+    else:
+        serverPortAvailable = 'NO'
+finally:
+    detectSocket.close()
+EOF
+
+    let picgoApiServerAviailable = py3eval('serverPortAvailable')
+    if picgoApiServerAviailable ==? 'NO'
+        throw 'E-PIM-22'
+    endif
 endfunction
 
 
@@ -627,19 +678,27 @@ endfunction
 
 
 function! s:cloudStorage.buildPicgoAppCmd(source) dict
-    let picgo_node_script_path = g:pi2mdSettings['pi2md_root'] . s:separator_char . 'scripts' . s:separator_char . 'picgo.js'
-    if a:source ==# ''
-		let picgo_upload_cmd = g:pi2mdSettings['storage_cloud_picgoapp_node_path'] . ' ' . picgo_node_script_path
-        call s:logger.debugMsg('the picgo app upload cmd is ' . picgo_upload_cmd)
-		return picgo_upload_cmd
+    let picgo_node_script_path = g:pi2mdSettings['pi2md_root']
+        \ . s:separator_char . 'scripts' . s:separator_char . 'picgo.js'
+    let picgo_upload_cmd = 
+        \ g:pi2mdSettings['storage_cloud_picgoapp_node_path']
+        \ . ' ' . picgo_node_script_path
+        \ . ' -p '
+        \ . s:settings.getSetting('storage_cloud_picgoapp_api_server_port')
+    if a:source !=# ''
+        let picgo_upload_cmd .= ' -f '
+            \ . a:source
 	endif
+    call s:logger.debugMsg('the picgo app upload cmd is ' . picgo_upload_cmd)
+    return picgo_upload_cmd
 endfunction
 
 function! s:cloudStorage.uploadByPicgoApp(source, ...) dict
     let deleteSource = get(a:, 1, 1)
     call s:logger.debugMsg('upload image by picgo app')
+    call s:utilityTools.detectPicgoApiServerPort()
     try
-        let picgoapp_upload_cmd = self.buildPicgoAppCmd('')
+        let picgoapp_upload_cmd = self.buildPicgoAppCmd(a:source)
         " let picgoappCmdResultList = system(picgoapp_upload_cmd)
         " let @r = system(picgoapp_upload_cmd)
         let picgoApiCmdResult = systemlist(picgoapp_upload_cmd)
