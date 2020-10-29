@@ -97,7 +97,9 @@ let s:Errors = {
     \ 'E-PIM-20': 'Invalid argument for Pi2md!',
     \ 'E-PIM-21': 'The image file does not exist!',
     \ 'E-PIM-22': 'The picgo server is not available,
-    \   please check your settings'
+    \   please check your settings',
+    \ 'E-PIM-23': 'Error occurred when execute system cmd!',
+    \ 'E-PIM-24': 'Error occurred when execute systemlist cmd!'
 	\ }
 
 " ==========================================================
@@ -231,6 +233,46 @@ endfunction
 " Call System Command func
 " ==========================================================
 
+let s:syscall = {}
+
+function! s:syscall.system(cmd) dict
+    if s:settings.getSetting('os') ==? 'Windows'
+        let envShell = &shell
+        let envShellcmdflag = &shellcmdflag
+        let &shell = 'cmd.exe'
+        let &shellcmdflag = '/c'
+        try
+            return systemlist(a:cmd)
+        " catch 
+        "     throw 'E-PIM-23' 
+        finally
+            let &shell = envShell
+            let &shellcmdflag = envShellcmdflag
+        endtry
+    else
+        return systemlist(a:cmd)
+    endif
+endfunction
+
+function! s:syscall.systemList(cmd) dict
+    if s:settings.getSetting('os') ==? 'Windows'
+        let envShell = &shell
+        let envShellcmdflag = &shellcmdflag
+        let &shell = 'cmd.exe'
+        let &shellcmdflag = '/c'
+        try
+            return systemlist(a:cmd)
+        " catch 
+        "     throw 'E-PIM-24' 
+        finally
+            let &shell = envShell
+            let &shellcmdflag = envShellcmdflag
+        endtry
+    else
+        return systemlist(a:cmd)
+    endif
+endfunction
+
 
 " ==========================================================
 " Utility Func
@@ -304,7 +346,7 @@ function! s:utilityTools.detectOS() dict
 			let s:separator_char = '\'
 		else
 			let s:separator_char = '/'
-			let s:os = substitute(system('uname'), '\n', '', '')
+			let s:os = substitute(s:syscall.system('uname'), '\n', '', '')
 		endif
 	endif
 endfunction
@@ -638,7 +680,7 @@ function s:cloudStorage.uploadByPicgoCore(source, ...) dict
             \ g:pi2mdSettings['storage_cloud_picgocore_path'] .
             \ ' upload ' .
             \ a:source
-        let picgoApiCmdResult= systemlist(picgocore_upload_cmd)
+        let picgoApiCmdResult= s:syscall.systemList(picgocore_upload_cmd)
         let image_url_result = self.getPicgoResult(picgoApiCmdResult)
         call s:logger.debugMsg('upload image by Picgo app success!')
         return image_url_result
@@ -701,7 +743,7 @@ function! s:cloudStorage.uploadByPicgoApp(source, ...) dict
         let picgoapp_upload_cmd = self.buildPicgoAppCmd(a:source)
         " let picgoappCmdResultList = system(picgoapp_upload_cmd)
         " let @r = system(picgoapp_upload_cmd)
-        let picgoApiCmdResult = systemlist(picgoapp_upload_cmd)
+        let picgoApiCmdResult = s:syscall.systemList(picgoapp_upload_cmd)
         let image_url_result = self.getPicgoResult(picgoApiCmdResult)
         call s:logger.debugMsg('upload image by Picgo app success!')
         return image_url_result

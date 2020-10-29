@@ -311,6 +311,7 @@ result:
 	- set default value for not required config which has depneds and it has been setup already
 	- picgo app support local image upload
 	- set shell for vim script before run `system` or `systemlist` 
+	- use cmd as the default shell on win32 platform
 * 2020-10-28
 	- add local image path support
 	- Compatible with neovim function argument
