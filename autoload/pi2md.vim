@@ -27,6 +27,7 @@ endfunction
 
 function! s:delete_on_error(channel, msg)
 	echom 'error: ' . a:msg
+	call s:show_delete_error_in_qf()
 endfunction
 
 function! s:delete_callback(channel, text)
@@ -52,6 +53,24 @@ endfunc
 
 function! s:delete_on_close(channel)
 	echom 'channel close'
+endfunction
+
+function! s:show_delete_error_in_qf()
+	let b:bnr = bufnr('%')
+	" let b:qfid = ''
+	let qf_list = []
+	" if !exists('b:qfid')
+	" 	let action = ' '
+	" endif
+	let qf_item = [{
+		\	'bufnr': b:bnr,
+		\	'text': 'can not delete the temporary file',	
+		\	'type': 'W'
+		\ }]
+	let qf_list += qf_item
+	call setqflist(qf_list)
+	keepalt exec 'botright copen'
+	keepalt wincmd k
 endfunction
 
 function pi2md#Testdelete()
