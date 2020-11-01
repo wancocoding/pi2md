@@ -21,8 +21,9 @@
 " \     'd:\develop\Scoop\apps\nodejs-lts\current\bin\picgo.cmd'
 " }
 
-
-
+py3 import uuid
+py3 from pi2md import download_image, detect_picgo_api_server
+py3 from pi2md import copy_file, remove_file, picgo_upload, save_clipboard
 
 " Configuration
 
@@ -99,8 +100,40 @@ let s:Errors = {
     \ 'E-PIM-22': 'The picgo server is not available,
     \   please check your settings',
     \ 'E-PIM-23': 'Error occurred when execute system cmd!',
-    \ 'E-PIM-24': 'Error occurred when execute systemlist cmd!'
+    \ 'E-PIM-24': 'Error occurred when execute systemlist cmd!',
+    \ 'E-PIM-25': 'file path error'
 	\ }
+
+" ==========================================================
+" File class 
+" ==========================================================
+
+" File Path Class
+let s:FilePathWrapper = {
+    \   'originPath': '',
+    \   'escapePath': '',
+    \   'isPath': 1
+    \ }
+
+" get file path or url
+function! s:FilePathWrapper.getPath() dict
+    if self.isPath == 0
+        return originPath
+    else
+        if s:settings.getSetting('os') !=? 'Darwin'
+            return self.originPath
+        endif
+        if self.escapePath != ''
+            return self.escapePath
+        else
+            let self.escapePath = fnameescape(self.originPath)
+            return self.escapePath
+        endif
+    endif
+endfunction
+
+
+
 
 " ==========================================================
 " Init Variables " 
@@ -112,10 +145,9 @@ let s:settings = {}
 function! s:settings.initPi2md() dict
 	try
 		" add more variables
+        call s:settings.initSettings()
 		call self.checkConfiguration()
 		call self.checkPy3()
-		call s:utilityTools.detectOS()
-		let g:pi2mdSettings['os'] = s:os
 
 		" get the pi2md plugin root absolute path
 		" let s:pi2md_root_full_path = fnamemodify(resolve(
@@ -141,8 +173,8 @@ EOF
 	endtry
 endfunction
 
-" make sure all configuration is right
-function! s:settings.checkConfiguration() dict
+
+function! s:settings.initSettings() dict
 	if !exists('g:pi2mdSettings')
 		" setting some default configuration
 		let g:pi2mdSettings = {
@@ -151,18 +183,22 @@ function! s:settings.checkConfiguration() dict
 			\ 'storage_local_position_type': 0,
 			\ 'storage_local_dir_name': 'images',
 			\ 'storage_local_prefer_relative_path': 1}
-	else
-		" check configuration , make sure all settings are correct
-		for ckey in keys(s:pi2mdConfigConstraint)
-			try
-				call self.checkConfigItem(ckey)
-			catch /.*/ 
-				call s:logger.errorMsg('Caught "' . v:exception .
-					\ '" in [checkConfiguration], error item is' . ckey)
-				throw 'E-PIM-11'
-			endtry
-		endfor
-	endif
+    endif
+    let g:pi2mdSettings['os'] = s:utilityTools.detectOS()
+endfunction
+
+" make sure all configuration is right
+function! s:settings.checkConfiguration() dict
+    " check configuration , make sure all settings are correct
+    for ckey in keys(s:pi2mdConfigConstraint)
+        try
+            call self.checkConfigItem(ckey)
+        catch /.*/ 
+            call s:logger.errorMsg('Caught "' . v:exception .
+                \ '" in [checkConfiguration], error item is: ' . ckey)
+            throw 'E-PIM-11'
+        endtry
+    endfor
 endfunction
 
 function s:settings.checkConfigItem(itemKey) dict
@@ -211,7 +247,9 @@ function s:settings.checkConfigItem(itemKey) dict
 		endif
 		" check path exist
 		if has_key(settingConstraint, 'isPath')
-			if empty(glob(fnameescape(userConfigItem)))
+            let filePathObj = copy(s:FilePathWrapper)
+            let filePathObj.originPath = userConfigItem
+			if empty(glob(filePathObj.getPath()))
 				let hasError = 1
 			endif
 		endif
@@ -223,7 +261,7 @@ endfunction
 
 function! s:settings.getSetting(key) dict
 	if !has_key(g:pi2mdSettings, a:key)
-		s:logger.errorMsg(a:key . ' does not exist, 
+		call s:logger.errorMsg(a:key . ' does not exist, 
 			\ please define it in your rc file')
 	else
 		return g:pi2mdSettings[a:key]
@@ -236,13 +274,13 @@ endfunction
 let s:syscall = {}
 
 function! s:syscall.system(cmd) dict
-    if s:settings.getSetting('os') ==? 'Windows'
+    if has('win64') || has('win32') || has('win16')
         let envShell = &shell
         let envShellcmdflag = &shellcmdflag
         let &shell = 'cmd.exe'
         let &shellcmdflag = '/c'
         try
-            return systemlist(a:cmd)
+            return system(a:cmd)
         " catch 
         "     throw 'E-PIM-23' 
         finally
@@ -250,12 +288,12 @@ function! s:syscall.system(cmd) dict
             let &shellcmdflag = envShellcmdflag
         endtry
     else
-        return systemlist(a:cmd)
+        return system(a:cmd)
     endif
 endfunction
 
 function! s:syscall.systemList(cmd) dict
-    if s:settings.getSetting('os') ==? 'Windows'
+    if has('win64') || has('win32') || has('win16')
         let envShell = &shell
         let envShellcmdflag = &shellcmdflag
         let &shell = 'cmd.exe'
@@ -316,19 +354,6 @@ function s:utilityTools.trimPsOutput(originLine) dict
     return realLine
 endfunction
 
-function! s:utilityTools.uuid4() dict
-
-python3 << EOF
-import uuid
-uuid_string = str(uuid.uuid4())
-EOF
-	" let l:new_random = strftime("%Y-%m-%d-%H-%M-%S")
-	" return l:new_random
-	let uuid_string = py3eval('uuid_string')
-	let ts_string = strftime('%Y-%m-%d-%H-%M-%S')
-	let new_random = uuid_string . '-' . ts_string
-	return new_random
-endfunction
 
 " check windows subsystem for linux
 function! s:utilityTools.isWSL() dict
@@ -346,8 +371,9 @@ function! s:utilityTools.detectOS() dict
 			let s:separator_char = '\'
 		else
 			let s:separator_char = '/'
-			let s:os = substitute(s:syscall.system('uname'), '\n', '', '')
+			let s:os = substitute(system('uname'), '\n', '', '')
 		endif
+        return s:os
 	endif
 endfunction
 
@@ -355,11 +381,12 @@ function! s:utilityTools.inputName() dict
     redraw | call inputsave()
     let image_path = input('Enter your image path: ')
     call inputrestore()
-    let image_path = fnameescape(image_path)
-    if empty(glob(image_path))
+    let filePathObj = copy(s:FilePathWrapper)
+    let filePathObj.originPath = image_path
+    if empty(glob(filePathObj.getPath()))
         throw 'E-PIM-21'
     endif
-    return image_path
+    return filePathObj
 endfunction
 
 function! s:utilityTools.detectPicgoApiServerPort() dict
@@ -367,36 +394,23 @@ function! s:utilityTools.detectPicgoApiServerPort() dict
         \ 'storage_cloud_picgoapp_api_server_port')
     call s:logger.debugMsg('checking the picgo api server, port is :' 
         \ . picgoApiServerPort)
-python3 << EOF
-
-import socket
-import vim
-
-ip_addr = '127.0.0.1'
-port = vim.eval('picgoApiServerPort')
-
-detectSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-detectSocket.settimeout(3)
-
-detectTarget = (ip_addr, int(port))
-
-serverPortAvailable = 'NO'
-try:
-    result = detectSocket.connect_ex(detectTarget)
-    if result == 0:
-        # connect to server success
-        serverPortAvailable = 'YES'
-    else:
-        serverPortAvailable = 'NO'
-finally:
-    detectSocket.close()
-EOF
-
-    let picgoApiServerAviailable = py3eval('serverPortAvailable')
+    py3 vim.command("let picgoApiServerAviailable= '%s'" % detect_picgo_api_server(vim.eval('picgoApiServerPort')))
     if picgoApiServerAviailable ==? 'NO'
         throw 'E-PIM-22'
     endif
 endfunction
+
+
+" ==========================================================
+" Async Job Helper
+" ==========================================================
+
+function! s:AsyncRun(fnRef)
+    let timerRef = timer_start(1000, fnRef,
+        \ {'repeat': 5})
+endfunction
+
+
 
 
 " ==========================================================
@@ -406,11 +420,11 @@ endfunction
 let s:fileHandler = {}
 
 " translate absolute path to relative path
-function s:fileHandler.getRelativePath(img_path) dict
+function s:fileHandler.getRelativePath(img_path_obj) dict
 	let current_file_header_path = expand('%:p:h')
 	let file_path_list = split(current_file_header_path, s:separator_char)
-	let img_name = fnamemodify(a:img_path, ':p:t')
-	let img_file_header_path = fnamemodify(a:img_path, ':p:h')
+	let img_name = fnamemodify(a:img_path_obj.originPath, ':p:t')
+	let img_file_header_path = fnamemodify(a:img_path_obj.originPath, ':p:h')
 	let img_path_list = split(img_file_header_path, s:separator_char)
 	let loop_index = 0
 	let not_equal_path_index = 0
@@ -425,7 +439,9 @@ function s:fileHandler.getRelativePath(img_path) dict
 				\ s:separator_char)
 			let img_relative_path = img_left_path_string . 
 				\ s:separator_char . img_name
-			return img_relative_path
+            let imgRelativePathObj = copy(s:FilePathWrapper)
+            let imgRelativePathObj.originPath = img_relative_path
+			return imgRelativePathObj
 		endif
 		
 		if s:os == 'Windows'
@@ -457,15 +473,17 @@ function s:fileHandler.getRelativePath(img_path) dict
 	let img_left_path_string = join(img_left_path_list, s:separator_char)
 	let img_relative_path = up_dir_string . img_left_path_string 
 		\ . s:separator_char . img_name
-	return img_relative_path
+    let imgRelativePathObj = copy(s:FilePathWrapper)
+    let imgRelativePathObj.originPath = img_relative_path
+	return imgRelativePathObj
 endfunction
 
 " convert the path to the final version, depending on your configuration file
 " config: storage_local_prefer_relative_path
-function! s:fileHandler.getLocalStoragePath(local_full_path) dict
+function! s:fileHandler.getLocalStoragePath(local_full_path_obj) dict
 	if s:settings.getSetting('storage_local_prefer_relative_path') == 0
 		call s:logger.debugMsg('local storage use absolute path')
-		return a:local_full_path
+		return a:local_full_path_obj
 	else
 		" try to use relative path
 		" let article_full_parent_path = expand('%:p:h')
@@ -476,37 +494,35 @@ function! s:fileHandler.getLocalStoragePath(local_full_path) dict
 		" let image_full_parent_path = fnamemodify(a:local_full_path, ':.')	
 		" execute 'lcd ' . current_working_dir
 		call s:logger.debugMsg('local storage use relative path')
-		return self.getRelativePath(a:local_full_path)
+		return self.getRelativePath(a:local_full_path_obj)
 	endif
 endfunction
 
-" copy file from one path to another,
-" del_source will decide whether to delete the 
-" source file
 function! s:fileHandler.copyFile(source, dest, ...) dict
-
-let deleteSource = get(a:, 1, 1)
-python3 << EOF
-import shutil
-
-delete_source = int(vim.eval('deleteSource'))
-if delete_source == 1:
-	shutil.move(vim.eval('a:source'), vim.eval('a:dest'))
-else:
-	shutil.copyfile(vim.eval('a:source'), vim.eval('a:dest'))
-EOF
-
+    let deleteSource = get(a:, 1, 1)
+    " let deleteFlag = deleteSource == 1 ? 'y' : 'n'
+    " delete file by job
+    let deleteFlag = 'n'
+    py3 copy_file(vim.eval('a:source.getPath()'), vim.eval('a:dest.getPath()'), vim.eval('deleteFlag'))
+    if deleteSource == 1
+        call self.AsyncDelete(a:source)
+    endif
 endfunction
 
-function s:fileHandler.delete(filePath) dict
-    call s:logger.debugMsg('delete the temp file now!')
+
+function s:fileHandler.AsyncDelete(filePathObj) dict
+    call s:logger.debugMsg('delete file via a async func!')
+    let fnName = 's:fileHandler.delete'
+    let fnArgs = [a:filePathObj]
+    let deleteFnRef = function(fnName, fnArgs, s:fileHandler)
+    call s:AsyncRun(deleteFnRef)
+endfunction
+
+
+function s:fileHandler.delete(fileObj) dict
+    call s:logger.debugMsg('try to delete the temp file now!')
     try
-python3 << EOF
-import os
-file_to_delete = vim.eval('a:filePath')
-if os.path.exists(file_to_delete):
-    os.remove(file_to_delete)
-EOF
+        py3 remove_file(vim.eval('a:fileObj.getPath()'))
 	catch /^Vim(python3):/
         throw 'E-PIM-16'
     endtry
@@ -534,20 +550,20 @@ function! s:markupLang.detectMarkupLanguage() dict
 endfunction
 
 " insert lint for different markup language
-function! s:markupLang.insertImageLink(img_url) dict
+function! s:markupLang.insertImageLink(img_url_obj) dict
     call s:logger.debugMsg('paste image finish!')
 	let file_type = self.detectMarkupLanguage()
 	if file_type ==? 'markdown'
 		execute "normal! i![I"
 		let ipos = getcurpos()
-		execute "normal! amage](" . a:img_url . ")"
+		execute "normal! amage](" . a:img_url_obj.originPath . ")"
 		call setpos('.', ipos)
 		redraw | echo 'please enter the title of this image...'
 		execute "normal! ve\<C-g>"
 	elseif file_type ==? 'rst'
 		execute "normal! i!.. |I"
 		let ipos = getcurpos()
-		execute "normal! amage| image:: " . a:img_url
+		execute "normal! amage| image:: " . a:img_url_obj.originPath
 		call setpos('.', ipos)
 		redraw | echo 'please enter the title of this image...'
 		execute "normal! ve\<C-g>"
@@ -556,7 +572,7 @@ function! s:markupLang.insertImageLink(img_url) dict
 		if g:pi2mdSettings['storage'] == 0
 			let vimwiki_flag = 'file:'
 		endif
-		execute "normal! i!{{" . vimwiki_flag . a:img_url . "}}"
+		execute "normal! i!{{" . vimwiki_flag . a:img_url_obj.originPath . "}}"
 	endif
 endf
 
@@ -567,43 +583,50 @@ endf
 
 let s:clipboardTools = {}
 
-function! s:clipboardTools.getClipBoardImageAndSave(save_path) dict
-	let save_to = fnameescape(a:save_path)
+function! s:clipboardTools.getClipBoardImageAndSave(save_path_obj) dict
+	let save_to = a:save_path_obj.getPath()
 	try
-python3 << EOF
-import vim
-from PIL import ImageGrab
-tmpimg = ImageGrab.grabclipboard()
-if tmpimg is None:
-	no_image_in_clip = 1
-else:
-	no_image_in_clip = 0
-	tmpimg.save(vim.eval('save_to'), 'PNG', compress_level=9)
-EOF
+        py3 vim.command("let save_result = '%s'" % save_clipboard(vim.eval('save_to')))
 	catch 'Vim(python3):ModuleNotFoundError: No module named \'PIL\''
 		throw 'E-PIM-13'
 	catch /^Vim\%((\a\+)\)\=:E370:/
 		throw 'E-PIM-14'
 	endtry
 
-	let py_fun_error = py3eval('no_image_in_clip')
-	if py_fun_error == 1
+	if save_result ==? ''
 		call s:logger.warningMsg('No image in your system clipboard!')
 		throw 'E-PIM-12'
 	endif
-	return a:save_path
+	return a:save_path_obj
 endfunction
 
 
 function! s:clipboardTools.getAndSaveClipBoardImageTemporary() dict
 	" get current dir and temp file_name
     call s:logger.debugMsg('save image from clipboard temporary!')
-	let temp_file_name = s:utilityTools.uuid4() . '.png'
+    py3 vim.command("let random_name = '%s'" % str(uuid.uuid4()))
+	let temp_file_name = random_name . '.png'
 	let temp_path = expand('%:p:h')
 	let temp_img_full_path = temp_path . s:separator_char . temp_file_name
     call s:logger.debugMsg('the temp image file path is:' . temp_img_full_path)
-	return s:clipboardTools.getClipBoardImageAndSave(temp_img_full_path)
+    let tempImageFIleObj = copy(s:FilePathWrapper)
+    let tempImageFIleObj.originPath = temp_img_full_path
+	return s:clipboardTools.getClipBoardImageAndSave(tempImageFIleObj)
 endfunction
+
+
+
+" ==========================================================
+" Remote Tools
+" ==========================================================
+
+let s:remoteTools = {}
+
+function s:remoteTools.saveRemoteTemporary(url) abort
+    
+endfunction
+
+
 
 
 
@@ -623,12 +646,14 @@ let s:localStorage = {}
 function! s:localStorage.saveToLocalStorage(source, ...) dict
     let deleteSource = get(a:, 1, 1)
 	" get file name from source
-	let file_name = fnamemodify(a:source, ':p:t')
+	let file_name = fnamemodify(a:source.originPath, ':p:t')
 	let file_dest_path = self.buildLocalStorageParentPath() 
 		\ . s:separator_char . file_name
-	call s:fileHandler.copyFile(a:source, file_dest_path, deleteSource)
+    let destFileObj = copy(s:FilePathWrapper)
+    let destFileObj.originPath = file_dest_path
+	call s:fileHandler.copyFile(a:source, destFileObj, deleteSource)
 	call s:logger.debugMsg('The final image local path is ' . file_dest_path)
-	let markup_link_url = s:fileHandler.getLocalStoragePath(file_dest_path)
+	let markup_link_url = s:fileHandler.getLocalStoragePath(destFileObj)
 	return markup_link_url
 endfunction
 
@@ -641,17 +666,13 @@ function! s:localStorage.buildLocalStorageParentPath() dict
 	else
 		" use absolute path for local storage
 		let local_save_parent_path = 
-			\ settings.getSetting('g:pi2md_localstorage_path')
+			\ s:settings.getSetting('g:pi2md_localstorage_path')
 	endif
 	" make dir if not exists
 	if !isdirectory(local_save_parent_path)
         call mkdir(local_save_parent_path)
     endif
-	if s:os == 'Darwin'
-        return local_save_parent_path
-    else
-        return fnameescape(local_save_parent_path)
-    endif
+    return local_save_parent_path
 
 endfunction
 
@@ -661,14 +682,15 @@ let s:cloudStorage = {}
 
 function s:cloudStorage.saveToCloudStorage(source, ...) dict
     let deleteSource = get(a:, 1, 1)
-    let remote_img_url = ''
+    let remote_img_obj = copy(s:FilePathWrapper)
+    let remote_img_obj.isPath = 0
     if g:pi2mdSettings['storage_cloud_tool'] ==? 'picgo-core'
-        let remote_img_url = self.uploadByPicgoCore(a:source, deleteSource)
+        let remote_img_obj = self.uploadByPicgoCore(a:source, deleteSource)
     elseif g:pi2mdSettings['storage_cloud_tool'] ==? 'picgo'
         " use picgo app api
-        let remote_img_url = self.uploadByPicgoApp(a:source, deleteSource)
+        let remote_img_obj = self.uploadByPicgoApp(a:source, deleteSource)
     endif
-    return remote_img_url
+    return remote_img_obj
 endfunction
 
 function s:cloudStorage.uploadByPicgoCore(source, ...) dict
@@ -679,11 +701,14 @@ function s:cloudStorage.uploadByPicgoCore(source, ...) dict
         let picgocore_upload_cmd = 
             \ g:pi2mdSettings['storage_cloud_picgocore_path'] .
             \ ' upload ' .
-            \ a:source
+            \ a:source.originPath
         let picgoApiCmdResult= s:syscall.systemList(picgocore_upload_cmd)
         let image_url_result = self.getPicgoResult(picgoApiCmdResult)
         call s:logger.debugMsg('upload image by Picgo app success!')
-        return image_url_result
+        let imageResultObj = copy(s:FilePathWrapper)
+        let imageResultObj.isPath = 0
+        let imageResultObj.originPath = image_url_result
+        return imageResultObj
     catch 'E-PIM-18' 
         throw 'E-PIM-18'
     finally
@@ -719,6 +744,7 @@ function s:cloudStorage.uploadByPicgoCore(source, ...) dict
 endfunction
 
 
+" Deprecated use py3 instead of node script
 function! s:cloudStorage.buildPicgoAppCmd(source) dict
     let picgo_node_script_path = g:pi2mdSettings['pi2md_root']
         \ . s:separator_char . 'scripts' . s:separator_char . 'picgo.js'
@@ -727,9 +753,9 @@ function! s:cloudStorage.buildPicgoAppCmd(source) dict
         \ . ' ' . picgo_node_script_path
         \ . ' -p '
         \ . s:settings.getSetting('storage_cloud_picgoapp_api_server_port')
-    if a:source !=# ''
+    if a:source.originPath !=# ''
         let picgo_upload_cmd .= ' -f '
-            \ . a:source
+            \ . a:source.originPath
 	endif
     call s:logger.debugMsg('the picgo app upload cmd is ' . picgo_upload_cmd)
     return picgo_upload_cmd
@@ -740,14 +766,24 @@ function! s:cloudStorage.uploadByPicgoApp(source, ...) dict
     call s:logger.debugMsg('upload image by picgo app')
     call s:utilityTools.detectPicgoApiServerPort()
     try
-        let picgoapp_upload_cmd = self.buildPicgoAppCmd(a:source)
-        " let picgoappCmdResultList = system(picgoapp_upload_cmd)
-        " let @r = system(picgoapp_upload_cmd)
-        let picgoApiCmdResult = s:syscall.systemList(picgoapp_upload_cmd)
-        let image_url_result = self.getPicgoResult(picgoApiCmdResult)
-        call s:logger.debugMsg('upload image by Picgo app success!')
-        return image_url_result
-    catch 'E-PIM-18' 
+        " let picgoapp_upload_cmd = self.buildPicgoAppCmd(a:source)
+        " " let picgoappCmdResultList = system(picgoapp_upload_cmd)
+        " " let @r = system(picgoapp_upload_cmd)
+        " let picgoApiCmdResult = s:syscall.systemList(picgoapp_upload_cmd)
+        " let image_url_result = self.getPicgoResult(picgoApiCmdResult)
+        let image_path = a:source.originPath
+        let api_port = s:settings.getSetting(
+            \ 'storage_cloud_picgoapp_api_server_port')
+        py3 vim.command("let upload_result = '%s'" % 
+            \ picgo_upload(image_path=vim.eval('image_path'), 
+            \ api_port=vim.eval('api_port')))
+        if upload_result != ''
+            call s:logger.debugMsg('upload image by Picgo app success!')
+            let imageResultObj = copy(s:FilePathWrapper)
+            let imageResultObj.isPath = 0
+            let imageResultObj.originPath = upload_result
+            return imageResultObj
+        endif
         throw 'E-PIM-18'
     finally
         if deleteSource == 1
@@ -785,19 +821,19 @@ endfunction
 function! s:pasteImage(source, ...)
     let deleteSource = get(a:, 1, 1)
 	" upload to cloud or save to local
-	let final_img_url = 'your link'
 	if s:settings.getSetting('storage') == 0
 		" local storage
 		call s:logger.debugMsg('use local storage')
-		let final_img_url = s:localStorage.saveToLocalStorage(
+		let final_img_path_obj= s:localStorage.saveToLocalStorage(
             \ a:source, deleteSource)
+        return final_img_path_obj
 	elseif s:settings.getSetting('storage') == 1
 		call s:logger.debugMsg('use cloud storage')
 		" cloud storage
-		let final_img_url = s:cloudStorage.saveToCloudStorage(
+		let final_img_url_obj = s:cloudStorage.saveToCloudStorage(
             \ a:source, deleteSource)
+        return final_img_url_obj
 	endif
-    return final_img_url
 endfunction
 
 " ==========================================================
@@ -807,9 +843,9 @@ endfunction
 function! s:pasteImageFromClipboard()
 	" save image to temp file
 	let temp_img_file = s:clipboardTools.getAndSaveClipBoardImageTemporary()
-	let final_img_url = s:pasteImage(temp_img_file, 1)
+	let final_img_url_obj = s:pasteImage(temp_img_file, 1)
 	" write link for markup language
-	call s:markupLang.insertImageLink(final_img_url)	
+	call s:markupLang.insertImageLink(final_img_url_obj)	
 endfunction
 
 
@@ -820,6 +856,7 @@ endfunction
 
 function! s:pasteImageFromRemoteUrl()
 	" save image to a temp file
+
 endfunction
 
 " ==========================================================
@@ -829,10 +866,10 @@ endfunction
 
 function! s:pasteImageFromLocalPath()
 	" wait for user input
-    let image_file = s:utilityTools.inputName()
-    let final_img_url = s:pasteImage(image_file, 0)
+    let image_file_obj = s:utilityTools.inputName()
+    let final_img_url_obj = s:pasteImage(image_file_obj, 0)
 	" write link for markup language
-	call s:markupLang.insertImageLink(final_img_url)	
+	call s:markupLang.insertImageLink(final_img_url_obj)	
     return
 endfunction
 
@@ -859,6 +896,7 @@ function! pi2md#Pi2md(...)
             call s:pasteImageFromLocalPath()
 		elseif methodFlag ==? 'r'
 			call s:logger.debugMsg('paste image from a remote url start!')
+            call s:pasteImageFromRemoteUrl()
 		endif
 	catch
 		call s:utilityTools.caught()
