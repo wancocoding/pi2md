@@ -1,7 +1,18 @@
 ChangeLog
 ======
 
-
+* 2020-11-02
+	- call init function when load plugin
+	- move unnecessarily function to autoload
+	- delete temp file if picgo server is not available
+	- delete file repeat 3 times
+	- use quickfix window to show error
+	- fnameescape check
+	- use job to delete temp file, because temp maybe locked by some app like dropbox
+	- fix local storage not delete temp file
+	- make sure file path safe on different platform
+	- use python instead of nodejs script
+	- remove python script inside vim script
 * 2020-10-29
 	- update node script
 	- add function to detect picgo api service
