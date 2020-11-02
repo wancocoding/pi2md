@@ -3,7 +3,7 @@
 " pi2md.vim - Paste Image to markdown
 " Maintainer:    Vincent Wancocoding  <http://cocoding.cc>
 " Create date:		Sep 28, 2020
-" Update date:		Oct 20, 2020
+" Update date:		Nov 02, 2020
 "
 " Settings Example 
 " more example, please see readme
@@ -404,7 +404,7 @@ endfunction
 " ==========================================================
 " Async Job Helper
 " ==========================================================
-
+" Deprecated  use job_start instead
 function! s:AsyncRun(fnRef)
     let timerRef = timer_start(1000, fnRef,
         \ {'repeat': 5})
@@ -505,11 +505,13 @@ function! s:fileHandler.copyFile(source, dest, ...) dict
     let deleteFlag = 'n'
     py3 copy_file(vim.eval('a:source.getPath()'), vim.eval('a:dest.getPath()'), vim.eval('deleteFlag'))
     if deleteSource == 1
-        call self.AsyncDelete(a:source)
+        " call self.AsyncDelete(a:source)
+        call pi2md#DeleteTempFile(a:source.originPath)
     endif
 endfunction
 
 
+" Deprecated, use pi2md#DeleteTempFile instead
 function s:fileHandler.AsyncDelete(filePathObj) dict
     call s:logger.debugMsg('delete file via a async func!')
     let fnName = 's:fileHandler.delete'
@@ -519,6 +521,7 @@ function s:fileHandler.AsyncDelete(filePathObj) dict
 endfunction
 
 
+" Deprecated
 function s:fileHandler.delete(fileObj) dict
     call s:logger.debugMsg('try to delete the temp file now!')
     try
@@ -714,7 +717,8 @@ function s:cloudStorage.uploadByPicgoCore(source, ...) dict
     finally
         " finally delete the temp image file
         if deleteSource == 1
-            call s:fileHandler.delete(a:source)
+            call pi2md#DeleteTempFile(a:source.originPath)
+            " call s:fileHandler.delete(a:source)
         endif
     endtry
 
@@ -787,7 +791,8 @@ function! s:cloudStorage.uploadByPicgoApp(source, ...) dict
         throw 'E-PIM-18'
     finally
         if deleteSource == 1
-            call s:fileHandler.delete(a:source)
+            call pi2md#DeleteTempFile(a:source.originPath)
+            " call s:fileHandler.delete(a:source)
         endif
     endtry
 endfunction
