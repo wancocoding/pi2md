@@ -17,12 +17,13 @@ IMGFOLDER = os.getcwd() + '/images/'
 ip_addr = '127.0.0.1'
 port = '36677'
 
-def download_image(image_url):
+def download_image(image_url, temp_path):
     """download a remote image url, and save a file"""
-    uuid_name = str(uuid.uuid4())
-    image_postfix = image_url.split('.')[-1]
-    temp_image_name = uuid_name + '.' + image_postfix
-    urllib.request.urlretrieve(image_url, temp_image_name)
+    # uuid_name = str(uuid.uuid4())
+    # image_postfix = image_url.split('.')[-1]
+    # temp_image_name = "".join([parent_path, os.path.sep, uuid_name, \
+    #     '.', image_postfix])
+    urllib.request.urlretrieve(image_url, temp_path)
 
 
 def detect_picgo_api_server(api_port=port):

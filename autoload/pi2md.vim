@@ -94,7 +94,8 @@ let s:Errors = {
     \   please check your settings',
     \ 'E-PIM-23': 'Error occurred when execute system cmd!',
     \ 'E-PIM-24': 'Error occurred when execute systemlist cmd!',
-    \ 'E-PIM-25': 'file path error'
+    \ 'E-PIM-25': 'File path error',
+    \ 'E-PIM-26': 'Error occurred when download image from remote'
 	\ }
 
 " ==========================================================
@@ -123,6 +124,12 @@ function! s:FilePathWrapper.getPath() dict
             return self.escapePath
         endif
     endif
+endfunction
+
+function! s:FilePathWrapper.getPostfix() dict
+	let path_list = split(self.originPath, '\.')
+	let postfix = path_list[-1]
+	return postfix
 endfunction
 
 
@@ -521,7 +528,8 @@ function s:utilityTools.caught() dict
 	if has_key(s:Errors, catchErr)
 		call s:logger.errorMsg(s:Errors[catchErr])
 	else
-		call s:logger.errorMsg('Caught "' . v:exception . '"')
+		call s:logger.errorMsg('Caught "' . v:exception
+			\ . '" in ' . v:throwpoint)
 	endif
 endfunction
 
@@ -554,15 +562,25 @@ function! s:utilityTools.detectOS() dict
 	endif
 endfunction
 
-function! s:utilityTools.inputName() dict
+function! s:utilityTools.inputName(...) dict
+	" 1 local path 2 remote url
+	let input_type = a:000[0] ? a:000[0] : 1
     redraw | call inputsave()
-    let image_path = input('Enter your image path: ')
+	if input_type == 1
+		let image_path = input('Enter your image path: ')
+	else
+		let image_path = input('Enter a remote  url: ')
+	endif
     call inputrestore()
     let filePathObj = copy(s:FilePathWrapper)
     let filePathObj.originPath = image_path
-    if empty(glob(filePathObj.getPath()))
-        throw 'E-PIM-21'
-    endif
+	if input_type == 1
+		if empty(glob(filePathObj.getPath()))
+			throw 'E-PIM-21'
+		endif
+	else
+		let filePathObj.isPath = 0
+	endif
     return filePathObj
 endfunction
 
@@ -683,7 +701,7 @@ function! s:fileHandler.copyFile(source, dest, ...) dict
     py3 copy_file(vim.eval('a:source.getPath()'), vim.eval('a:dest.getPath()'), vim.eval('deleteFlag'))
     if deleteSource == 1
         " call self.AsyncDelete(a:source)
-        call s:DeleteTempFile(a:source.originPath)
+        call s:DeleteTempFile(a:source.getPath())
     endif
 endfunction
 
@@ -703,7 +721,8 @@ function s:fileHandler.delete(fileObj) dict
     call s:logger.debugMsg('try to delete the temp file now!')
     try
         py3 remove_file(vim.eval('a:fileObj.getPath()'))
-	catch /^Vim(python3):/
+	catch /^Vim(py3):/
+		call s:logger.errorMsg('Caught "' . v:exception . '" in [iniPi2md]')
         throw 'E-PIM-16'
     endtry
 endfunction
@@ -767,7 +786,7 @@ function! s:clipboardTools.getClipBoardImageAndSave(save_path_obj) dict
 	let save_to = a:save_path_obj.getPath()
 	try
         py3 vim.command("let save_result = '%s'" % save_clipboard(vim.eval('save_to')))
-	catch 'Vim(python3):ModuleNotFoundError: No module named \'PIL\''
+	catch 'Vim(py3):ModuleNotFoundError: No module named \'PIL\''
 		throw 'E-PIM-13'
 	catch /^Vim\%((\a\+)\)\=:E370:/
 		throw 'E-PIM-14'
@@ -889,12 +908,10 @@ function s:cloudStorage.uploadByPicgoCore(source, ...) dict
         let imageResultObj.isPath = 0
         let imageResultObj.originPath = image_url_result
         return imageResultObj
-    catch 'E-PIM-18' 
-        throw 'E-PIM-18'
     finally
         " finally delete the temp image file
         if deleteSource == 1
-            call s:DeleteTempFile(a:source.originPath)
+            call s:DeleteTempFile(a:source.getPath())
             " call s:fileHandler.delete(a:source)
         endif
     endtry
@@ -968,7 +985,7 @@ function! s:cloudStorage.uploadByPicgoApp(source, ...) dict
         throw 'E-PIM-18'
     finally
         if deleteSource == 1
-            call s:DeleteTempFile(a:source.originPath)
+            call s:DeleteTempFile(a:source.getPath())
             " call s:fileHandler.delete(a:source)
         endif
     endtry
@@ -1037,8 +1054,26 @@ endfunction
 " ==========================================================
 
 function! s:pasteImageFromRemoteUrl()
-	" save image to a temp file
+	" wait for user input
+    let image_file_obj = s:utilityTools.inputName(2)
+	" download image
 
+	try
+		py3 vim.command("let random_name = '%s'" % str(uuid.uuid4()))
+		let temp_path_str = expand('%:p:h') . s:separator_char .
+			\ random_name . '.' . image_file_obj.getPostfix()
+		let temp_path_exp = fnameescape(temp_path_str)
+		py3 download_image(vim.eval('image_file_obj.originPath'),
+			\	vim.eval('temp_path_exp'))
+	catch /^Vim(py3):/
+		call s:logger.errorMsg('Caught "' . v:exception . '" in [iniPi2md]')
+		throw 'E-PIM-26'	
+	endtry
+	let tmp_img_obj = copy(s:FilePathWrapper)
+	let tmp_img_obj.originPath = temp_path_str
+	let final_img_url_obj = s:pasteImage(tmp_img_obj, 1)
+	" write link for markup language
+	call s:markupLang.insertImageLink(final_img_url_obj)	
 endfunction
 
 " ==========================================================
@@ -1086,3 +1121,4 @@ function! pi2md#Pi2md(...)
 endfunction
 
 
+" vim:set ft=vim et sts=4 sw=4 ts=4 tw=78:

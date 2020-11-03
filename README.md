@@ -30,7 +30,7 @@ Both of `Vim` and `NeoVim` can use this plugin
 
 * [x] Clipboard
 * [x] Local file(path)
-* [ ] Remote Url
+* [x] Remote Url
 
 **Support OS**
 

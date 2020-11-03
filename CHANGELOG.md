@@ -1,6 +1,7 @@
 ChangeLog
 ======
-
+* 2020-11-03
+	- finish insert image from remote url
 * 2020-11-02
 	- call init function when load plugin
 	- move unnecessarily function to autoload
