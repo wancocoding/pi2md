@@ -1,13 +1,15 @@
 Paste Image To Markdown
 =======================
 
-A Vim plugin use to autosave  image from clipboard to local system storage or upload image to cloud storage which from your clipboard, and then insert link snippet to your article
+A Vim/NeoVim plugin use to autosave  image from clipboard to local system storage or upload image to cloud storage which from your clipboard, and then insert link snippet to your article
 
 ## Table of Contents
 
   - [Screencasts](#screencasts)
   - [Features](#features)
   - [Installing](#installing)
+	- [Dependencies](#dependencies)
+	- [Install Pi2md](#install-pi2md)
   - [Usage](#usage)
   - [Example](#example)
   - [ChangeLog](#changelog)
@@ -27,8 +29,8 @@ Both of `Vim` and `NeoVim` can use this plugin
 **You can upload image** from
 
 * [x] Clipboard
-* [ ] Local file(path)
-* [ ] Remote Url
+* [x] Local file(path)
+* [x] Remote Url
 
 **Support OS**
 
@@ -40,8 +42,8 @@ Both of `Vim` and `NeoVim` can use this plugin
 **Support Markup Language**
 
 * [x] [Markdown](https://daringfireball.net/projects/markdown/)
-* [ ] [Vimwiki](https://github.com/vimwiki/vimwiki)
-* [ ] [reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html)
+* [x] [Vimwiki](https://github.com/vimwiki/vimwiki)
+* [x] [reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html)
 
 **Support Storage**
 
@@ -83,8 +85,43 @@ Both of `Vim` and `NeoVim` can use this plugin
 
 ## Installing
 
+### Dependencies
 
-### [vim-plug](https://github.com/junegunn/vim-plug)
+#### Pillow
+
+You must install python3 and enable python3 for your vim/neovim
+support for your vim, and then install [Pillow](https://github.com/python-pillow/Pillow) 
+
+For `Win32/64` or `Win10` User, before `pip install`
+```
+python -m ensurepip
+python -m pip install -U pip
+python -m pip install pillow
+```
+Unix like platforms:
+```
+pip install -U pip
+pip install pillow
+```
+
+
+#### Picgo-Core(Optional)
+
+If you upload to cloud with picgo-core, you must install picgo globally:
+```
+npm install picgo -g
+```
+
+If you upload to cloud with picgo app, you must install axios globally:
+```
+npm install axios -g
+```
+
+### Install Pi2md 
+
+You can install `Pi2md` by the 3rd-party plugin managers
+
+[vim-plug](https://github.com/junegunn/vim-plug)
 
 ```vim
 call plug#begin('~/.vim/plugged')
@@ -93,13 +130,13 @@ call plug#end()
 ```
 after restart vim/nvim or `:so[urce]` your `vimrc`, then`:PlugInstall`
 
-### [pathogen.vim](https://github.com/tpope/vim-pathogen)
+[pathogen.vim](https://github.com/tpope/vim-pathogen)
 
 ```
 git clone https://github.com/wancocoding/pi2md.git ~/.vim/bundle/pi2md
 ```
 
-### [Vundle.vim](https://github.com/VundleVim/Vundle.vim)
+[Vundle.vim](https://github.com/VundleVim/Vundle.vim)
 
 ```vim
 call vundle#begin()
@@ -107,7 +144,7 @@ Plugin 'preservim/nerdtree'
 call vundle#end()
 ```
 
-### [dein.vim](https://github.com/Shougo/dein.vim)
+[dein.vim](https://github.com/Shougo/dein.vim)
 
 ```vim
 call dein#begin()
@@ -116,14 +153,6 @@ call dein#end()
 ```
 
 
-### Notice
-
-`Win32/64` or `Win10` User, you must install python3 and enable python3 support for your vim, and then install [Pillow Gitgub](https://github.com/python-pillow/Pillow) for your python3
-```
-python -m ensurepip
-python -m pip install -U pip
-python -m pip install pillow
-```
 
 ## Usage
 
@@ -167,6 +196,67 @@ let g:pi2md_localstorage_path = '/Users/vincent/Pictures'
 let g:pi2md_localstorage_prefer_relative = 0
 " (optional) defaut: 0, 1: try to use relative path first
 ```
+
+### Picgo app config
+
+see: [Picgo Guide - Configuration](https://picgo.github.io/PicGo-Doc/en/guide/config.html)
+
+Where is picgo config file
+
+* windows: `%APPDATA%\picgo\data.json`
+* Linux: `$XDG_CONFIG_HOME/picgo/data.json` or `~/.config/picgo/data.json`
+* macOS: `~/Library/Application\ Support/picgo/data.json`
+
+An exaple on windows picgo app, `data.json`
+```
+
+{
+  "uploaded": [],
+  "picBed": {
+    "current": "aliyun",
+    "uploader": "aliyun",
+    "smms": {
+      "token": ""
+    },
+    "aliyun": {
+      "accessKeyId": "your akid",
+      "accessKeySecret": "your aks",
+      "area": "your oss region",
+      "bucket": "your bucket name",
+      "customUrl": "http://yourdomain",
+      "options": "",
+      "path": "your/custom/path"
+    }
+  },
+  "settings": {
+    "shortKey": {
+      "picgo:upload": {
+        "enable": true,
+        "key": "CommandOrControl+Shift+P",
+        "name": "upload",
+        "label": "快捷上传"
+      }
+    },
+    "server": {
+      "port": 36677,
+      "host": "127.0.0.1",
+      "enable": true
+    },
+    "showUpdateTip": true,
+    "customLink": "$url"
+  },
+  "picgoPlugins": {
+    "picgo-plugin-rename-file": true
+  },
+  "debug": true,
+  "PICGO_ENV": "GUI",
+  "needReload": false,
+  "picgo-plugin-rename-file": {
+    "format": "{y}/{m}/{d}/{hash}-{timestamp}"
+  }
+}
+```
+
 
 ## Example
 
@@ -216,29 +306,7 @@ result:
 
 ## ChangeLog
 
-* 2020-10-16 1.0.0.b6
-	- use absolute path on windows when the drive are different
-	- update random func, use uuid
-	- use py3 script to handle clipboard on all platforms
-* 2020-10-14 1.0.0.beta5
-	- fix windows 10 clipboard paste bug
-	- add a powershell script
-	- put all script together
-* 2020-10-13 1.0.0.beta4
-	- add local storage for windows
-	- add command
-	- update readme 
-* 2020-10-09 1.0.0.beta3
-	- add picgo support
-	- add node script for post request 
-* 2020-10-09 1.0.0.beta.2
-	- fix relative path bug
-* 2020-10-09 1.0.0.beta
-	- add support for PicGo-Core
-	- add support for uPic on MacOS only
-* 2020-10-08
-	- you can use relative path when save to local storage
-
+see: [CHANGELOG](https://github.com/wancocoding/pi2md/blob/master/CHANGELOG.md)
 
 ## License
 
@@ -263,4 +331,3 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
