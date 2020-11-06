@@ -1,5 +1,7 @@
 ChangeLog
 ======
+* 2020-11-06
+	- fix delete temp file bug on linux, test on linux success
 * 2020-11-03
 	- finish insert image from remote url
 * 2020-11-02

@@ -36,7 +36,7 @@ Both of `Vim` and `NeoVim` can use this plugin
 
 * [x] MacOS
 * [x] Windows
-* [ ] Linux
+* [x] Linux
 * [ ] WSL(Windows Subsystem For Linux)
 
 **Support Markup Language**

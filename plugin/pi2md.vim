@@ -3,7 +3,7 @@
 " pi2md.vim - Paste Image to markdown
 " Maintainer:    Vincent Wancocoding  <http://cocoding.cc>
 " Create date:		Sep 28, 2020
-" Update date:		Nov 03, 2020
+" Update date:		Nov 06, 2020
 "
 " Settings Example 
 " more example, please see readme

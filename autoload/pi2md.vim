@@ -95,7 +95,9 @@ let s:Errors = {
     \ 'E-PIM-23': 'Error occurred when execute system cmd!',
     \ 'E-PIM-24': 'Error occurred when execute systemlist cmd!',
     \ 'E-PIM-25': 'File path error',
-    \ 'E-PIM-26': 'Error occurred when download image from remote'
+    \ 'E-PIM-26': 'Error occurred when download image from remote',
+    \ 'E-PIM-27': 'You must install xclip first when you os is Linux!',
+    \ 'E-PIM-28': 'no image in your clipboard!'
 	\ }
 
 " ==========================================================
@@ -168,19 +170,22 @@ endfunction
 function! s:deleteFile(filePath)
 	let file_entity = s:getTempEntity(a:filePath)
 	let l:args = []
-	let l:args += split(&shell)
-	let l:args += split(&shellcmdflag)
-	if s:settings.getSetting('os') == 'windows'
-	" if has('win32') || has('win64')
+	if s:settings.getSetting('os') ==? 'Windows'
+        " force use cmd, not powerline on windows
+        " let l:args += split(&shell)
+        " let l:args += split(&shellcmdflag)
 		let l:args += ['cmd', '/c']
 		let l:args += ['del']
 		let l:args += ['/f']
+        let l:args += [a:filePath]
 	else
+        " let l:args += ['"rm -rf '.a:filePath.'"']
 		let l:args += ['rm']
 		let l:args += ['-f']
+		let l:args += [a:filePath]
 	endif
+    echom l:args
 	" let delCmd = 'del /f d:\test2.txt'
-	let l:args += [a:filePath]
 	" \	'err_cb': function('s:delete_on_error'),
 	let delJobOptions = {
 	\	'callback': function('s:delete_callback'),
@@ -782,10 +787,40 @@ endf
 
 let s:clipboardTools = {}
 
-function! s:clipboardTools.getClipBoardImageAndSave(save_path_obj) dict
+function! s:clipboardTools.saveClipboardBySystemCmdOnLinux(file_path_obj) dict
+    if executable('xclip') && $DISPLAY != ''
+        let l:xclip_detect_cmd = 'xclip -selection clipboard -t TARGETS -o'
+        let l:xclip_save_cmd = 'xclip -selection clipboard -t image/png -o > %s'
+        let l:targets = filter(systemlist(l:xclip_detect_cmd), 'v:val =~# "image"')
+        if empty(l:targets) | throw 'E-PIM-28' | endif
+
+        if index(l:targets, "image/png") >= 0
+            " Use PNG if available
+            let mimetype = "image/png"
+            let extension = "png"
+        else
+            " Fallback
+            let mimetype = l:targets[0]
+            let extension = split(mimetype, '/')[-1]
+        endif
+        call system(printf(l:xclip_save_cmd, a:file_path_obj.originPath))
+        if v:shell_error | throw 'E-PIM-29' | endif
+        return a:file_path_obj.originPath
+    else
+        throw 'E-PIM-27'
+    endif
+endfunction
+
+function! s:clipboardTools.saveClipboardBySystemCmd(save_path_obj) dict
 	let save_to = a:save_path_obj.getPath()
 	try
-        py3 vim.command("let save_result = '%s'" % save_clipboard(vim.eval('save_to')))
+        if s:settings.getSetting('os') ==? 'linux'
+            " Pillow not support linux clipboard, so use xclip instead
+            let save_result = self.saveClipboardBySystemCmdOnLinux(a:save_path_obj)
+        else
+            py3 vim.command("let save_result = '%s'" % save_clipboard(vim.eval('save_to')))
+        endif
+
 	catch 'Vim(py3):ModuleNotFoundError: No module named \'PIL\''
 		throw 'E-PIM-13'
 	catch /^Vim\%((\a\+)\)\=:E370:/
@@ -810,7 +845,7 @@ function! s:clipboardTools.getAndSaveClipBoardImageTemporary() dict
     call s:logger.debugMsg('the temp image file path is:' . temp_img_full_path)
     let tempImageFIleObj = copy(s:FilePathWrapper)
     let tempImageFIleObj.originPath = temp_img_full_path
-	return s:clipboardTools.getClipBoardImageAndSave(tempImageFIleObj)
+	return s:clipboardTools.saveClipboardBySystemCmd(tempImageFIleObj)
 endfunction
 
 
