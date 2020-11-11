@@ -37,6 +37,16 @@ let s:pi2mdConfigConstraint = {
 	\	'default': 0, 
 	\	'required': 1,
 	\	'errorMsg': 'the value of local position type config must be 0 or 1'},
+	\ 'storage_local_dir_name': {
+	\	'default': 'images', 
+	\	'required': 0,
+	\	'errorMsg': 'you could define a custom folder to save images!'},
+	\ 'storage_local_absolute_path': {
+	\	'default': '', 
+	\	'required': 0,
+	\	'depends': {'itemKey': 'storage_local_position_type', 'itemVal': 1},
+	\	'errorMsg': 'you must define local absolute path for save image,
+			\ if you use position type 1'},
 	\ 'storage_local_prefer_relative_path': {
 	\	'legalRange': [0, 1], 
 	\	'default': 1, 
@@ -56,13 +66,6 @@ let s:pi2mdConfigConstraint = {
 	\	'depends': {'itemKey': 'storage_cloud_tool', 'itemVal': 'picgo-core'},
 	\	'errorMsg': 'you must define your picgo-core bin path,
 			\ if you use cloud by picgo-core'},
-    \ 'storage_cloud_picgoapp_node_path': {
-        \ 'default': 'node',
-        \ 'required': 0,
-        \ 'isPath': 1,
-        \ 'depends': {'itemKey': 'storage_cloud_tool', 'itemVal': 'picgo'},
-        \ 'errorMsg': 'you must define the right nodejs bin path,
-            \ if you want to use picgo app'},
     \ 'storage_cloud_picgoapp_api_server_port': {
         \ 'default': '36677',
         \ 'required': 0,
@@ -184,7 +187,7 @@ function! s:deleteFile(filePath)
 		let l:args += ['-f']
 		let l:args += [a:filePath]
 	endif
-    echom l:args
+    " echom l:args
 	" let delCmd = 'del /f d:\test2.txt'
 	" \	'err_cb': function('s:delete_on_error'),
 	let delJobOptions = {
@@ -900,7 +903,7 @@ function! s:localStorage.buildLocalStorageParentPath() dict
 	else
 		" use absolute path for local storage
 		let local_save_parent_path = 
-			\ s:settings.getSetting('g:pi2md_localstorage_path')
+			\ s:settings.getSetting('storage_local_absolute_path')
 	endif
 	" make dir if not exists
 	if !isdirectory(local_save_parent_path)

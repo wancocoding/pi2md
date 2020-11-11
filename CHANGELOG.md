@@ -1,5 +1,8 @@
 ChangeLog
 ======
+* 2020-11-10
+	- update settings about local storage
+	- bug fix
 * 2020-11-06
 	- fix delete temp file bug on linux, test on linux success
 * 2020-11-03
