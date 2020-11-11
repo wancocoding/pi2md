@@ -1,5 +1,7 @@
 ChangeLog
 ======
+* 2020-11-11 1.0.2.a1
+	- rewrite readme
 * 2020-11-10
 	- update settings about local storage
 	- bug fix
