@@ -1121,7 +1121,7 @@ endfunction
 
 function! s:pasteImageFromLocalPath()
 	" wait for user input
-    let image_file_obj = s:utilityTools.inputName()
+    let image_file_obj = s:utilityTools.inputName(1)
     let final_img_url_obj = s:pasteImage(image_file_obj, 0)
 	" write link for markup language
 	call s:markupLang.insertImageLink(final_img_url_obj)	
