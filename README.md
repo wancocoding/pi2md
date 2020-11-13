@@ -7,19 +7,31 @@ A Vim/NeoVim plugin use to autosave  image from clipboard to local system storag
 
   - [Screencasts](#screencasts)
   - [Features](#features)
-  - [Installing](#installing)
-	- [Dependencies](#dependencies)
-	- [Install Pi2md](#install-pi2md)
+  - [Installation](#installation)
   - [Usage](#usage)
-  - [Example](#example)
+  - [Configuration](#configuration)
+  - [Examples](#examples)
   - [ChangeLog](#changelog)
   - [License](#license)
 
 ## Screencasts
 
-**upload image to cloud from clipboard**
+**paste image from clipboard**
 
-![2020-10-09-cloud-storage-upic](https://user-images.githubusercontent.com/55470045/95555526-83c96580-0a44-11eb-847d-863846fd2a4c.gif)
+![paste-image-from-clipboard](https://user-images.githubusercontent.com/55470045/98808447-164f9100-2457-11eb-9550-47f176f358b3.gif)
+
+
+**paste image from local path**
+
+![paste-image-from-local-path](https://user-images.githubusercontent.com/55470045/98812660-d63fdc80-245d-11eb-9bb8-b6d48abb7353.gif)
+
+**paste image from web url**
+
+![paste-image-from-web-url](https://user-images.githubusercontent.com/55470045/98817049-8284c180-2464-11eb-8e2e-e7e778dcf182.gif)
+
+**upload image from clipboard to cloud storage**
+
+![upload-image-from-clipboard-to-cloud](https://user-images.githubusercontent.com/55470045/98820382-0d67bb00-2469-11eb-8cce-95947c3fdc39.gif)
 
 
 ## Features
@@ -50,13 +62,15 @@ Both of `Vim` and `NeoVim` can use this plugin
 * [x] Local Storage
 * [x] Cloud Storage (via Picgo-Core, Picgo App or uPic etc...)
 
-**Support Cloud Image Hosting Client or Library**
+**Support Cloud Storage**
+
+> Pi2md supperts upload images to your cloud storage by 3rd-party libraries 
+> like *picgo-core*, *uPic*...
 
 * [x] PicGo-Core(nodejd moudle, recommend)
 * [x] PicGo App
 * [x] uPic(only on osx)
 
-**Support Cloud**
 
  [Picgo](https://github.com/Molunerfinn/PicGo) or [PicGo-Core](https://github.com/PicGo/PicGo-Core)
 
@@ -83,11 +97,16 @@ Both of `Vim` and `NeoVim` can use this plugin
 * [Imgur](https://imgur.com/)
 * [custom upload api](https://blog.svend.cc/upic/tutorials/custom)
 
-## Installing
+## Installation
 
-### Dependencies
+**Requirements**
 
-#### Pillow
+* vim 8.1+ and compiled with python3 support
+* install `Pillow` for python3(Optional)
+* cloud library(Optional)
+
+
+**Install Pillow(Optional)**
 
 You must install python3 and enable python3 for your vim/neovim
 support for your vim, and then install [Pillow](https://github.com/python-pillow/Pillow) 
@@ -105,19 +124,16 @@ pip install pillow
 ```
 
 
-#### Picgo-Core(Optional)
+**Install Picgo-Core(Optional)**
 
-If you upload to cloud with picgo-core, you must install picgo globally:
+`Picgo-core` is an *nodejs* package, If you upload to cloud with picgo-core,
+you can install it simply by:
 ```
 npm install picgo -g
 ```
 
-If you upload to cloud with picgo app, you must install axios globally:
-```
-npm install axios -g
-```
 
-### Install Pi2md 
+**Install Pi2md**
 
 You can install `Pi2md` by the 3rd-party plugin managers
 
@@ -159,49 +175,94 @@ call dein#end()
 
 You can paste image from clipboard by the command:
 ```
-:Pi2mdClipboard
+:Pi2md
 ```
-or call global function
-```vim
-:call pi2md#PasteClipboardImageToMarkdown()
-```
-or you can define a specific key to call this command
+Commands:
 
-```vim
-nmap <leader>pi :Pi2mdClipboard<CR>
-```
-
-All Commands:
 | Command                 | Intro                            |
 | ----------------------- | -------------------------------- |
-| :Pi2mdClipboard         | paste image from clipboard       |
-| :Pi2mdPath <image path> | paste image from a absolute path |
-| :Pi2mdUrl <image url>   | paste image from a remote url    |
+| :Pi2md                  | paste image from clipboard       |
+| :Pi2md p                | paste image from a absolute path |
+| :Pi2md r                | paste image from a remote url    |
 
 
 
-### Local Storage
+### Local Storage Settings
 
 Local Storage is the default way to save clipboard image
 
 ```vim
-let g:pi2md_save_to = 0
-" default: 0 (0: local, 1: cloud) 
-let g:pi2md_localstorage_strategy = 0
-" default: 0 (0: current dir, 1: absolute path) if you use cloud , ignore it
-let g:pi2md_localstorage_dirname = 'images'
-" (optional) default: images, if you select use absolute path, no need to define it 
-let g:pi2md_localstorage_path = '/Users/vincent/Pictures'
-" (optional) no default value, if you use local storage strategy 1, you must define it
-let g:pi2md_localstorage_prefer_relative = 0
-" (optional) defaut: 0, 1: try to use relative path first
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 0,
+    \ 'storage_local_position_type': 0
+  \ }
 ```
 
-### Picgo app config
+### Cloud Storage Settings
+
+#### 1 use picgo-core(recommended)
+
+put this in your `vimrc` file
+
+```vim
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 1,
+    \ 'storage_cloud_tool': 'picgo-core',
+    \ 'storage_cloud_picgocore_path': 
+    \     '/home/vincent/.nvm/versions/node/v12.19.0/lib/node_modules/picgo/bin/picgo'
+  \ }
+```
+
+config your picgo-core,see: [Picgo-core](https://github.com/PicGo/PicGo-Core)
+
+picgo-core settings example(for aliyun oss):
+
+edit your `~/.picgo/config.json`
+
+```json
+{
+  "picBed": {
+    "uploader": "aliyun",
+    "current": "smms",
+    "aliyun": {
+      "accessKeyId": "your ak id",
+      "accessKeySecret": "your ak key",
+      "bucket": "your bucket name",
+      "area": "your oss region",
+      "path": "cocoding/blog/images/",
+      "customUrl": "http://your.oss.domain.com",
+      "options": ""
+    }
+  },
+  "picgoPlugins": {
+    "picgo-plugin-rename-file": true
+  },
+  "picgo-plugin-rename-file": {
+    "format": "{y}/{m}/{d}/{hash}-{timestamp}"
+  }
+}
+```
+
+
+
+#### 2 use picgo app
+
+If you use `Picgo app` as a cloud library
 
 see: [Picgo Guide - Configuration](https://picgo.github.io/PicGo-Doc/en/guide/config.html)
 
-Where is picgo config file
+```vim
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 1,
+    \ 'storage_cloud_tool': 'picgo',
+    \ 'storage_cloud_picgoapp_api_server_port': '36677'
+  \ }
+```
+
+Where is the picgo config file
 
 * windows: `%APPDATA%\picgo\data.json`
 * Linux: `$XDG_CONFIG_HOME/picgo/data.json` or `~/.config/picgo/data.json`
@@ -234,7 +295,7 @@ An exaple on windows picgo app, `data.json`
         "enable": true,
         "key": "CommandOrControl+Shift+P",
         "name": "upload",
-        "label": "快捷上传"
+        "label": "upload-key"
       }
     },
     "server": {
@@ -257,50 +318,184 @@ An exaple on windows picgo app, `data.json`
 }
 ```
 
+then start the picgo app, make sure picgo server started with port `36677` or what your defined in your vimrc files
 
-## Example
+## Configuration
 
-### 1. Save image in current folder and use relative path(Clipboard)
+Configuring `Pi2md` is very simple, you only need to add the following content
+to your `vimrc`
 
 ```vim
-let g:pi2md_save_to = 0
-let g:pi2md_localstorage_strategy = 0
-let g:pi2md_localstorage_dirname = 'images'
-let g:pi2md_localstorage_prefer_relative = 1
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 1,
+    \ 'storage_local_position_type': 0,
+    \ 'storage_local_dir_name': 'images',
+    \ 'storage_local_absolute_path': '/home/vincent/temp/imgs',
+    \ 'storage_local_prefer_relative_path': 1,
+    \ 'storage_cloud_tool': 'picgo-core',
+    \ 'storage_cloud_picgocore_path': 
+    \     '/home/vincent/.nvm/versions/node/v12.19.0/lib/node_modules/picgo/bin/picgo',
+    \ 'storage_cloud_picgoapp_api_server_port': '36677'
+  \ }
 ```
 
-call the command and you will get this in your markdown file:
+**debug**
+
+- type: integer
+- default: 1
+
+Output debugging mesage if it turns on
+
+**storage**
+
+- type: integer
+- default: 0
+	+ 0: save the image locally
+	+ 1: save the image in the cloud storage
+
+**storage_local_position_type**
+
+- type: integer
+- default: 0
+	+ 0: save images in `images` folder which in current directory
+	+ 1: save images in a absolute path you defined
+
+**storage_local_dir_name**
+
+- type: string
+- default: images
+
+define the directory name for save images, when the **storage_local_position_type** value is **0**
+
+**storage_local_absolute_path**
+
+- type: string
+- no default
+
+> you must define a path if the **storage_local_position_type** is **1**
+
+**storage_local_prefer_relative_path**
+
+
+- type: integer
+- default: 1
+
+> Try to use relative path to display images as much as possible
+
+**storage_cloud_tool**
+
+- type: string
+- default: picgo-core
+	- picgo: a app on all platform
+	- picgo-core: nodejs library
+	- upic: a app on macOS
+
+select a cloud library to save your images
+
+**storage_cloud_picgocore_path**
+
+- type: string
+- no default
+
+define the path of `picgo-core`, if you use `picgo-core` to save image in your cloud storage.
+
+
+**storage_cloud_picgoapp_api_server_port**
+
+- type: string
+- default: 36677
+
+picgo app start a api server, we can use it to upload image, it only works when
+you use picgo app as a tool for uploading images to your cloud storage.
+
+## Examples
+
+### 1. Save image in current folder and use relative path
+
+```vim
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 0,
+    \ 'storage_local_position_type': 0,
+    \ 'storage_local_dir_name': 'images',
+    \ 'storage_local_prefer_relative_path': 1,
+  \ }
+```
+
+results:
 ```markdown
 ![Image](images/2020-10-13-22-33-02.png)
 ```
 
-### 2. Save image in current folder and use absolute path(Clipboard)
+### 2. Save image in current folder and use absolute path
 
 ```vim
-let g:pi2md_save_to = 0
-let g:pi2md_localstorage_strategy = 0
-let g:pi2md_localstorage_dirname = 'images'
-let g:pi2md_localstorage_prefer_relative = 0
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 0,
+    \ 'storage_local_position_type': 1,
+    \ 'storage_local_absolute_path': '/home/vincent/temp/imgs',
+    \ 'storage_local_prefer_relative_path': 0,
+
+  \ }
 ```
 
 result:
 ```markdown
-![Image](/Users/vincent/develop/wancocoding/docs/example/images/2020-10-13-22-37-04.png)
+![Image](/Users/vincent/imgs/2020-10-13-22-37-04.png)
 ```
 
-### 3. Save image in a specific directory and use relative path(Clipboard)
+### 3. Save image in a specific directory and use relative path
 
 
 ```vim
-let g:pi2md_save_to = 0
-let g:pi2md_localstorage_strategy = 1
-let g:pi2md_localstorage_path= 'f:\Dropbox\Dropbox\docs\md\notes\files\images\202010'
-let g:pi2md_localstorage_prefer_relative = 1
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 0,
+    \ 'storage_local_position_type': 1,
+    \ 'storage_local_absolute_path': 'f:\Dropbox\Dropbox\docs\md\notes\files\images\202010',
+    \ 'storage_local_prefer_relative_path': 1,
+  \ }
 ```
 
 result:
 ```
 ![Image](..\..\..\files\images\202010\1c353706-c5a1-4865-b767-9f37e5c71c4e-2020-10-16-10-19-28.png)
+```
+
+### 4. Save image to cloud by picgo-core
+
+
+```vim
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 1,
+    \ 'storage_cloud_tool': 'picgo-core',
+    \ 'storage_cloud_picgocore_path': 
+    \     '/home/vincent/.nvm/versions/node/v12.19.0/lib/node_modules/picgo/bin/picgo'
+  \ }
+```
+
+results:
+```
+![Image](http://cdn.images.myclouddomain.com/cocoding/blog/images/2020/11/13/10068c58c929bcbf80598fed427dab61-1605260574.png)
+```
+
+### 5. Save image to cloud by picgo app
+
+```vim
+let g:pi2mdSettings = {
+    \ 'debug': 1,
+    \ 'storage': 1,
+    \ 'storage_cloud_tool': 'picgo',
+    \ 'storage_cloud_picgoapp_api_server_port': '36677'
+  \ }
+```
+
+results:
+```
+![Image](http://cdn.images.myclouddomain.com/cocoding/blog/images/2020/11/13/10068c58c929bcbf80598fed427dab61-1605260574.png)
 ```
 
 
