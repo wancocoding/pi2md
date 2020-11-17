@@ -1,5 +1,8 @@
 ChangeLog
 ======
+* 2020-11-17
+	- update function of check vim version
+	- update job start function of delete temp file for Neovim
 * 2020-11-11 1.0.2.a1
 	- rewrite readme
 * 2020-11-10
