@@ -18,6 +18,7 @@ py3 from pi2md import simple_hash_text, detect_file
 " }]
 "
 let b:temp_files = []
+let b:delete_job_dict = {}
 
 
 " the configuration constraint
@@ -170,9 +171,8 @@ function! s:removeTempEntity(file_path)
 	endfor
 endfunction
 
-function! s:deleteFile(filePath)
-	let file_entity = s:getTempEntity(a:filePath)
-	let l:args = []
+function! s:getDeleteJobArgs(filePath)
+    let l:args = []
 	if s:settings.getSetting('os') ==? 'Windows'
         " force use cmd, not powerline on windows
         " let l:args += split(&shell)
@@ -183,24 +183,48 @@ function! s:deleteFile(filePath)
         let l:args += [a:filePath]
 	else
         " let l:args += ['"rm -rf '.a:filePath.'"']
+		let l:args += ['bash']
+		let l:args += ['-c']
 		let l:args += ['rm']
 		let l:args += ['-f']
 		let l:args += [a:filePath]
 	endif
-    " echom l:args
-	" let delCmd = 'del /f d:\test2.txt'
-	" \	'err_cb': function('s:delete_on_error'),
-	let delJobOptions = {
-	\	'callback': function('s:delete_callback'),
-	\	'close_cb': function('s:delete_on_close'),
-	\	'exit_cb': function('s:delete_on_job_exit'),
-	\	'out_io': 'pipe',
-	\	'in_io': 'null',
-	\	'err_io': 'pipe',
-	\	'out_mode': 'nl',
-	\	'err_mode': 'nl',
-	\	'stoponexit': 'term',
-	\ }
+    return l:args
+endfunction
+
+function! s:startDeleteJob(filePath)
+    let l:args = s:getDeleteJobArgs(a:filePath)
+    if !has('nvim')
+        " Vim Job
+        let l:delJobOptions = {
+        \	'callback': function('s:delete_callback'),
+        \	'close_cb': function('s:delete_on_close'),
+        \	'exit_cb': function('s:delete_on_job_exit'),
+        \	'out_io': 'pipe',
+        \	'in_io': 'null',
+        \	'err_io': 'pipe',
+        \	'out_mode': 'nl',
+        \	'err_mode': 'nl',
+        \	'stoponexit': 'term',
+        \ }
+        let delJob = job_start(l:args, l:delJobOptions)
+        return delJob
+    else
+        " Neovim job
+        let l:delJobOptions = {
+            \ 'on_stdout': function('s:nvimJobOnEvent'),
+            \ 'on_stderr': function('s:nvimJobOnEvent'),
+            \ 'on_exit': function('s:nvimJobOnEvent')
+            \ }
+        let delJob = jobstart(l:args, l:delJobOptions)
+        let job_id_key = string(delJob)
+        let b:delete_job_dict[job_id_key] = a:filePath
+        return delJob
+    endif
+endfunction
+
+function! s:deleteFile(filePath)
+	let file_entity = s:getTempEntity(a:filePath)
 	let f_info = file_entity['entity']
 	let f_info['attempts'] = f_info['attempts'] + 1
 	if f_info['attempts'] <= s:max_attempts
@@ -209,7 +233,8 @@ function! s:deleteFile(filePath)
 		let b:temp_files += [file_entity]
 		call s:logger.debugMsg('delete file ' . a:filePath
 			\ . ' attempts: ' . f_info['attempts'])
-		let s:delJob = job_start(l:args, delJobOptions)
+		" let s:delJob = job_start(l:args, delJobOptions)
+		let delJob = s:startDeleteJob(a:filePath)
 		" let l:success = (job_status(s:delJob) != 'fail')? 1 : 0
 	else
 		call s:logger.debugMsg('max retry, no more attempts to delete file '
@@ -258,6 +283,28 @@ endfunction
 " Deprecated
 function! s:delete_on_error(channel, msg)
 	call s:logger.debugMsg('error on delete temp file :' . a:msg)
+endfunction
+
+function! s:nvimJobOnEvent(job_id, data, event)
+    if a:event == 'exit'
+        let l:job_id_key = string(a:job_id)
+        try
+            if has_key(b:delete_job_dict, l:job_id_key)
+                let l:file_path = b:delete_job_dict[l:job_id_key]
+                let l:file_deleted = s:CheckFileDeleted(l:file_path)
+                if l:file_deleted == 1
+                    call s:logger.debugMsg('delete temp file success!')
+                    call s:removeTempEntity(l:file_path)
+                else
+                    " retry delete file
+                    sleep 3000m
+                    call s:deleteFile(l:file_path)
+                endif
+            endif
+        finally
+            call remove(b:delete_job_dict, l:job_id_key)
+        endtry
+    endif
 endfunction
 
 function! s:delete_callback(channel, text)

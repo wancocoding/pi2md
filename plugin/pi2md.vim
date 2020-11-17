@@ -26,15 +26,24 @@
 if exists('did_load_plugin_pi2md') || &cp
     finish
 endif
-let did_load_plugin_pi2md = 1
 
-if version < 801
+if has('nvim')
+    let s:has_features = has('timers') && has('nvim-0.2.1') && has('python3')
+else
+    let s:has_features = v:version >= 801 && has('python3') && has('timers')
+        \ && exists('*job_start')
+endif
+
+
+
+if !s:has_features
    echohl WarningMsg
-   echom  "Pi2md requires Vim >= 8.1"
+   echom  "Pi2md equires NeoVim >= 0.2.1 or Vim 8 with +timers +job +channel +python3"
    echohl None
    finish
 endif
 
+let did_load_plugin_pi2md = 1
 
 " ==========================================================
 " Bind Commands
